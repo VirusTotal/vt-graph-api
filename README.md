@@ -15,7 +15,7 @@ python install main.py"
 ```
 python
 import vt_graph_api
-print vt_graph_api.VERSION",
+print vt_graph_api.VERSION
 ```
 
 Should ouput:
