@@ -20,7 +20,7 @@ print vt_graph_api.VERSION
 
 Should ouput:
 ```
-api-1.0.0"
+api-1.0.0
 ```
 
 # Usage
