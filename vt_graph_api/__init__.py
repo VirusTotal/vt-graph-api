@@ -1,7 +1,6 @@
 import json
 import requests
 from multiprocessing.pool import ThreadPool
-from six import iterkeys
 
 name = "vt_graph_api"
 
@@ -489,7 +488,7 @@ class VTGraph(object):
         graph. The expansion will stop as soon as any expansion result adds more
         than this limit to the graph.
     """
-    pending = {node_id for node_id in iterkeys(self.nodes)}
+    pending = {node_id for node_id in self.nodes.iterkeys()}
     visited = set()
     for _ in range(level):
       for node_id in pending:
@@ -502,7 +501,7 @@ class VTGraph(object):
               len(self.nodes))
           return
       pending = {node_id
-                 for node_id in iterkeys(self.nodes)
+                 for node_id in self.nodes.iterkeys()
                  if node_id not in visited}
 
   def add_link(self, node_source, node_target, connection_type):
