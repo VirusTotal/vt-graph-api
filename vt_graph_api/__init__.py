@@ -2,6 +2,7 @@ import json
 import requests
 from multiprocessing.pool import ThreadPool
 from six import iterkeys
+from hashlib import sha256
 
 name = "vt_graph_api"
 
@@ -333,7 +334,7 @@ class VTGraph(object):
 
   def _get_file_sha_256(self, node_id):
     """
-    Return sha256 hash for node_id with file type if matches found in VT, else return simple node_id
+    Return sha256 hash for node_id with file type if matches found in VT, else return simple node_id.
 
     Params:
       node_id: str, identifier of the node. See the top level documentation
@@ -345,16 +346,36 @@ class VTGraph(object):
     headers = self._get_headers()
     url = "https://www.virustotal.com/api/v3/files/%s" % node_id
     response = requests.get(url, headers=headers)
-    try:
+    if response.status_code == 200:
       data = response.json()
       node_id = data.get('data', dict()).get('attributes', dict()).get('sha256', node_id)
-    except json.JSONDecodeError:
-      pass
     return node_id
+
+  def _get_url_id(self, node_id):
+    """
+    Return correct node_id in case of url instead of sha256.
+
+    Params:
+      node_id: str, identifier of the node. See the top level documentation
+      to understand IDs.
+
+    Returns:
+      str.
+    """
+    headers = self._get_headers()
+    url = "https://www.virustotal.com/api/v3/urls"
+    response = requests.post(url, data={'url':node_id}, headers=headers)
+    if response.status_code == 200:
+      data = response.json()
+      node_id = data.get('data', dict()).get('id', "u-'%s'-u" % node_id).split('-')
+      if len(node_id) > 1:
+        node_id = node_id[1]
+    return node_id
+    
 
   def _get_node_id(self, node_id):
     """
-    Return correct node_id in case of file node with no sha256 hash.
+    Return correct node_id in case of file node with no sha256 hash or url instead of sha256.
 
     Params:
       node_id: str, string, identifier of the node. See the top level documentation
@@ -363,10 +384,20 @@ class VTGraph(object):
     Returns:
       str.
     """
+
     if node_id in iterkeys(self.nodes):
       return node_id 
-    return self._get_file_sha_256(node_id)
-  
+
+    new_id = self._get_url_id(node_id)
+    if new_id in iterkeys(self.nodes):
+      return new_id
+
+    new_id = self._get_file_sha_256(node_id)
+    if new_id in iterkeys(self.nodes):
+      return new_id
+    
+    return ""
+        
   def _get_headers(self):
     """Returns the request headers."""
     return {'x-apikey': self.api_key, 'x-tool': VERSION}
@@ -395,7 +426,9 @@ class VTGraph(object):
     This call consumes API quota if fetch_information=True.
     """
     if node_type == 'file' and len(node_id) != 64:
-      node_id = self._get_node_id(node_id)
+      node_id = self._get_file_sha_256(node_id)
+    if node_type == 'url':
+      node_id = self._get_url_id(node_id)
           
     if node_id not in self.nodes:
       new_node = Node(node_id, node_type)
@@ -407,11 +440,14 @@ class VTGraph(object):
         url = "https://www.virustotal.com/api/v3/%s/%s" % (
             end_point, node_id)
         response = requests.get(url, headers=headers)
-        data = response.json()
+        if response.status_code == 200:
+          data = response.json()
+        else:
+          data = {}
+          self.log("Request to '%s' with '%s' status code" % (url, response.status_code))
         if 'attributes' in data.get('data', dict()):
           new_node.add_attributes(data['data']['attributes'])
         self.nodes[node_id] = new_node
-
     return self.nodes[node_id]
 
   def expand(self, node_id, expansion, max_nodes_per_relationship=None,
@@ -448,8 +484,10 @@ class VTGraph(object):
       url = "%s?cursor=%s" % (url, cursor)
     headers = {'x-apikey': self.api_key, 'x-tool': 'graph-api-v1'}
     response = requests.request("GET", url, headers=headers)
-    data = response.json()
-
+    if response.status_code == 200:
+      data = response.json()
+    else:
+      self.log("Request to '%s' with '%s' status code" % (url, response.status_code))
     # Add cursor data.
     has_more = data.get('meta', {})
 
@@ -604,6 +642,7 @@ class VTGraph(object):
     return """
     <iframe src="https://www.virustotal.com/graph/embed/%s" width="800" height="600"></iframe>
     """ % self.graph_id
+
 
 class Node(object):
 
