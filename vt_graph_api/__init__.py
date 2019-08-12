@@ -333,45 +333,39 @@ class VTGraph(object):
 
   def _get_file_sha_256(self, node_id):
     """
-    Return sha256 hash for node_id with file type if matches found in VT, else return None
+    Return sha256 hash for node_id with file type if matches found in VT, else return empty string
 
     Params:
-      node_id: str, string, identififer of the node. See the top level documentation
+      node_id: str, identifier of the node. See the top level documentation
       to understand IDs.
 
     Returns:
       str.
     """
     headers = self._get_headers()
-    url = "https://www.virustotal.com/api/v3/files/%s" % (node_id)
+    url = "https://www.virustotal.com/api/v3/files/%s" % node_id
     response = requests.get(url, headers=headers)
     try:
       data = response.json()
-      id = data.get('data', dict()).get('attributes', dict()).get('sha256')
+      node_id = data.get('data', dict()).get('attributes', dict()).get('sha256', node_id)
     except json.JSONDecodeError:
-      id = node_id
-    return id
+      pass
+    return node_id
 
   def _get_node_id(self, node_id):
     """
     Return correct node_id in case of file node with no sha256 hash.
 
     Params:
-      node_id: str, string, identififer of the node. See the top level documentation
+      node_id: str, string, identifier of the node. See the top level documentation
       to understand IDs.
-
-    Raises:
-      NodeNotFound: if the node is not found.
 
     Returns:
       str.
-
     """
     if node_id in iterkeys(self.nodes):
       return node_id 
-
-    sha_256 = self._get_file_sha_256(node_id)
-    return sha_256
+    return self._get_file_sha_256(node_id)
   
   def _get_headers(self):
     """Returns the request headers."""
@@ -425,19 +419,23 @@ class VTGraph(object):
     """Expands the given node with the given expansion.
 
     Args:
-      node_id: string, identififer of the node. See the top level documentation
+      node_id: string, identifier of the node. See the top level documentation
         to understand IDs.
       expansion: string, expansion name. For example: compressed_parents for
         nodes of type file.
       max_nodes_per_relationship: (opt) integer, max number of nodes that will
         be expanded per relationship. Minimum value will be 10.
       cursor: (opt) string, VT relationships cursor.
+    
+    Raises:
 
     This call consumes API quota.
     """
     self.log("Expanding node '%s' with expansion '%s'" % (node_id, expansion))
 
     node_id = self._get_node_id(node_id)
+    if node_id not in iterkeys(self.nodes):
+      raise NodeNotFound("node '%s' not found in nodes" % node_id)
     node = self.nodes[node_id]
     parent_node_id = node.node_id
     parent_node_type = node.node_type
