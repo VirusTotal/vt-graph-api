@@ -362,7 +362,13 @@ class VTGraph(object):
     Returns:
       str.
     """
-    return sha256(node_id.encode()).hexdigest()
+    headers = self._get_headers()
+    url = "https://www.virustotal.com/api/v3/urls"
+    response = requests.post(url, data={'url':node_id}, headers=headers)
+    if response.status_code == 200:
+      data = response.json()
+      node_id = data.get('data', dict()).get('id', "u-'%s'-u" % node_id).split('-')[1]
+    return node_id
     
 
   def _get_node_id(self, node_id):
@@ -440,7 +446,6 @@ class VTGraph(object):
         if 'attributes' in data.get('data', dict()):
           new_node.add_attributes(data['data']['attributes'])
         self.nodes[node_id] = new_node
-
     return self.nodes[node_id]
 
   def expand(self, node_id, expansion, max_nodes_per_relationship=None,
