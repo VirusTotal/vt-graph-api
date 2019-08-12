@@ -334,7 +334,7 @@ class VTGraph(object):
 
   def _get_file_sha_256(self, node_id):
     """
-    Return sha256 hash for node_id with file type if matches found in VT, else return simple node_id
+    Return sha256 hash for node_id with file type if matches found in VT, else return simple node_id.
 
     Params:
       node_id: str, identifier of the node. See the top level documentation
@@ -353,10 +353,10 @@ class VTGraph(object):
 
   def _get_url_id(self, node_id):
     """
-    Return correct node_id in case of url instead of sha256
+    Return correct node_id in case of url instead of sha256.
 
     Params:
-      node_id: str, string, identifier of the node. See the top level documentation
+      node_id: str, identifier of the node. See the top level documentation
       to understand IDs.
 
     Returns:
@@ -367,7 +367,9 @@ class VTGraph(object):
     response = requests.post(url, data={'url':node_id}, headers=headers)
     if response.status_code == 200:
       data = response.json()
-      node_id = data.get('data', dict()).get('id', "u-'%s'-u" % node_id).split('-')[1]
+      node_id = data.get('data', dict()).get('id', "u-'%s'-u" % node_id).split('-')
+      if len(node_id) > 1:
+        node_id = node_id[1]
     return node_id
     
 
@@ -482,8 +484,10 @@ class VTGraph(object):
       url = "%s?cursor=%s" % (url, cursor)
     headers = {'x-apikey': self.api_key, 'x-tool': 'graph-api-v1'}
     response = requests.request("GET", url, headers=headers)
-    data = response.json()
-
+    if response.status_code == 200:
+      data = response.json()
+    else:
+      self.log("Request to '%s' with '%s' status code" % (url, response.status_code))
     # Add cursor data.
     has_more = data.get('meta', {})
 
