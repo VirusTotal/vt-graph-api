@@ -331,6 +331,48 @@ class VTGraph(object):
     self.api_calls += 1
     self.log("API counter incremented. Total value: %s" % self.api_calls)
 
+  def _get_file_sha_256(self, node_id):
+    """
+    Return sha256 hash for node_id with file type if matches found in VT, else return None
+
+    Params:
+      node_id: str, string, identififer of the node. See the top level documentation
+      to understand IDs.
+
+    Returns:
+      str.
+    """
+    headers = self._get_headers()
+    url = "https://www.virustotal.com/api/v3/files/%s" % (node_id)
+    response = requests.get(url, headers=headers)
+    try:
+      data = response.json()
+      id = data.get('data', dict()).get('attributes', dict()).get('sha256')
+    except json.JSONDecodeError:
+      id = node_id
+    return id
+
+  def _get_node_id(self, node_id):
+    """
+    Return correct node_id in case of file node with no sha256 hash.
+
+    Params:
+      node_id: str, string, identififer of the node. See the top level documentation
+      to understand IDs.
+
+    Raises:
+      NodeNotFound: if the node is not found.
+
+    Returns:
+      str.
+
+    """
+    if node_id in iterkeys(self.nodes):
+      return node_id 
+
+    sha_256 = self._get_file_sha_256(node_id)
+    return sha_256
+  
   def _get_headers(self):
     """Returns the request headers."""
     return {'x-apikey': self.api_key, 'x-tool': VERSION}
@@ -358,6 +400,9 @@ class VTGraph(object):
 
     This call consumes API quota if fetch_information=True.
     """
+    if node_type == 'file' and len(node_id) != 64:
+      node_id = self._get_node_id(node_id)
+          
     if node_id not in self.nodes:
       new_node = Node(node_id, node_type)
       if label:
@@ -371,7 +416,8 @@ class VTGraph(object):
         data = response.json()
         if 'attributes' in data.get('data', dict()):
           new_node.add_attributes(data['data']['attributes'])
-      self.nodes[node_id] = new_node
+        self.nodes[node_id] = new_node
+
     return self.nodes[node_id]
 
   def expand(self, node_id, expansion, max_nodes_per_relationship=None,
@@ -391,6 +437,7 @@ class VTGraph(object):
     """
     self.log("Expanding node '%s' with expansion '%s'" % (node_id, expansion))
 
+    node_id = self._get_node_id(node_id)
     node = self.nodes[node_id]
     parent_node_id = node.node_id
     parent_node_type = node.node_type
@@ -458,6 +505,7 @@ class VTGraph(object):
     It consumes API quota, one for each expansion available for the node.
     """
     results = []
+    node = self._get_node_id(node)
     for expansion in self.nodes[node].expansions_available:
       results.append(
           pool.apply_async(
@@ -520,6 +568,8 @@ class VTGraph(object):
 
     This call does NOT consume API quota.
     """
+    node_source = self._get_node_id(node_source) 
+    node_target = self._get_node_id(node_target)
     if node_source not in self.nodes:
       raise NodeNotFound("Source '%s' not found in nodes" % node_source)
     if node_target not in self.nodes:
@@ -534,6 +584,7 @@ class VTGraph(object):
 
     This call does NOT consume API quota.
     """
+    node_id = self._get_node_id(node_id)
     if node_id not in self.nodes:
       raise NodeNotFound("node '%s' not found in nodes" % node_id)
 
