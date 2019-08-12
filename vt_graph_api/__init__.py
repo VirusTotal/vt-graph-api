@@ -333,7 +333,7 @@ class VTGraph(object):
 
   def _get_file_sha_256(self, node_id):
     """
-    Return sha256 hash for node_id with file type if matches found in VT, else return empty string
+    Return sha256 hash for node_id with file type if matches found in VT, else return simple node_id
 
     Params:
       node_id: str, identifier of the node. See the top level documentation
