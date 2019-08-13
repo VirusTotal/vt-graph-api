@@ -323,10 +323,10 @@ class VTGraph(object):
         self.graph_id = data['data']['id']
       else:
         self.log("Saving graph error: %s" % data)
-        raise SaveGraphError()
+        raise SaveGraphError(str(data))
     else:
       self.log("Saving graph error: %s status code" % response.status_code)
-      raise SaveGraphError()
+      raise SaveGraphError("Saving graph error: %s status code" % response.status_code)
 
     self._add_editors()
     self._add_viewers()
@@ -453,7 +453,8 @@ class VTGraph(object):
           new_node.add_attributes(data['data']['attributes'])
       self.nodes[node_id] = new_node
     return self.nodes[node_id]
-      
+
+
   def expand(self, node_id, expansion, max_nodes_per_relationship=None,
       cursor=None):
     """Expands the given node with the given expansion.
