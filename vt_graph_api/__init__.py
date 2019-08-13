@@ -317,12 +317,16 @@ class VTGraph(object):
     url = "https://www.virustotal.com/api/v3/graphs"
     headers = {'x-apikey': self.api_key, 'x-tool': VERSION}
     response = requests.post(url, headers=headers, data=json.dumps(output))
-    data = response.json()
-    if 'data' in data:
-      self.graph_id = data['data']['id']
+    if response.status_code == 200:
+      data = response.json()
+      if 'data' in data:
+        self.graph_id = data['data']['id']
+      else:
+        self.log("Saving graph error: %s" % data)
+        raise SaveGraphError(str(data))
     else:
-      self.log("Saving graph error: %s" % data)
-      raise SaveGraphError()
+      self.log("Saving graph error: %s status code" % response.status_code)
+      raise SaveGraphError("Saving graph error: %s status code" % response.status_code)
 
     self._add_editors()
     self._add_viewers()
@@ -430,7 +434,7 @@ class VTGraph(object):
     if node_type == 'url':
       node_id = self._get_url_id(node_id)
           
-    if node_id not in self.nodes:
+    if node_id not in iterkeys(self.nodes):
       new_node = Node(node_id, node_type)
       if label:
         new_node.add_label(label)
@@ -447,8 +451,9 @@ class VTGraph(object):
           self.log("Request to '%s' with '%s' status code" % (url, response.status_code))
         if 'attributes' in data.get('data', dict()):
           new_node.add_attributes(data['data']['attributes'])
-        self.nodes[node_id] = new_node
+      self.nodes[node_id] = new_node
     return self.nodes[node_id]
+
 
   def expand(self, node_id, expansion, max_nodes_per_relationship=None,
       cursor=None):
@@ -487,6 +492,7 @@ class VTGraph(object):
     if response.status_code == 200:
       data = response.json()
     else:
+      data = {}
       self.log("Request to '%s' with '%s' status code" % (url, response.status_code))
     # Add cursor data.
     has_more = data.get('meta', {})
