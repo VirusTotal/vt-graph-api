@@ -7,7 +7,7 @@ Install VirusTotal Graph Python API.
 ```
 git clone https://github.com/VirusTotal/vt_graph_api
 cd vt_graph_api
-python install main.py
+python install setup.py
 ```
 
 # Verifying the installation
