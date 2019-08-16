@@ -2,6 +2,7 @@ import json
 import sys
 import requests
 from multiprocessing.pool import ThreadPool
+from multiprocessing import Value, Manager
 from six import iterkeys
 from .errors import CollaboratorNotFound, NodeNotFound, SaveGraphError
 from .node import Node
@@ -13,7 +14,6 @@ if sys.version_info[0] < 3:
 else:
   import queue
 
-pool = ThreadPool(processes=4)
 
 class VTGraph(object):
   
@@ -413,6 +413,48 @@ class VTGraph(object):
     self._increment_api_counter()
     return expansion_nodes
 
+  def _recursive_search_parallel(self, node_source, node_target, max_api_quotas=10000, depth=0, max_depth=5, path=list(), nodes_explored=list(), found=Value('i', 0)):
+
+    print(("search %s | depth: %s" % (node_source.node_id, depth)))
+
+    quotas_consumed = 0
+    success = False
+
+    if node_source not in nodes_explored:
+      nodes_explored.append(node_source)
+      expansions = Node.NODE_EXPANSIONS.get(node_source.node_type)
+      expansion_max_api_quota = (max_api_quotas - len(expansions)) / len(expansions)
+
+      threads = []
+      i = 0
+
+      while quotas_consumed < max_api_quotas and i < len(expansions) and not found.value:
+        __nodes = self._get_expansion_nodes(node_source, expansions[i], max_nodes_per_relationship=40)
+        quotas_consumed += 1
+        if node_target not in __nodes:
+          if len(__nodes) > 0:
+              pool = ThreadPool(processes=len(__nodes)) 
+              for node in __nodes:
+                threads.append(pool.apply_async(self._recursive_search_parallel, (node, node_target, expansion_max_api_quota, depth + 1, max_depth, path + [(node_source.node_id, node.node_id, expansions[i], node.node_type)], nodes_explored, found)))
+        else:
+          found.value = 1
+          success = True
+          path.append((node_source.node_id, node_target.node_id, expansions[i], node_target.node_type))
+        i += 1
+
+      if not found.value:
+        results = [th.get() for th in threads]
+        print(results)
+        i = 0
+        while i < len(results) and not success:
+          __success, __path = results[i]
+          if __success:
+            success = __success 
+            path = __path
+          i += 1
+
+    return success, path
+
   def _recursive_search(self, nodes_queue, node_target, max_api_quotas, max_depth, depth=0, path=list(), last_node=None, nodes_explored=list()):
     """Search for connection between node_source and node_target. 
 
@@ -530,7 +572,7 @@ class VTGraph(object):
       raise NodeNotFound("node '%s' not found in nodes" % node_id)
     node = self.nodes[node_id]
 
-    new_nodes = self._get_expansion_nodes(node, expansion, max_nodes_per_relationship, cursor)
+    new_nodes = self._get_expansion_nodes(node, expansion, max_nodes_per_relationship)
     # Adds data to graph.
     for new_node in new_nodes:
       self.add_node(new_node.node_id, new_node.node_type)
@@ -552,17 +594,18 @@ class VTGraph(object):
     """
     results = []
     node = self._get_node_id(node)
-    for expansion in self.nodes[node].expansions_available:
-      results.append(
-          pool.apply_async(
-              self.expand,
-              (node, expansion, max_nodes_per_relationship))
-          )
-      # self.expand(
-      #     node, expansion, max_nodes_per_relationship=max_nodes_per_relationship)
+    with ThreadPool(processes=4) as pool:
+      for expansion in self.nodes[node].expansions_available:
+        results.append(
+            self.pool.apply_async(
+                self.expand,
+                (node, expansion, max_nodes_per_relationship))
+            )
+        # self.expand(
+        #     node, expansion, max_nodes_per_relationship=max_nodes_per_relationship)
 
-    # Wait for results.
-    [r.get() for r in results]
+      # Wait for results.
+      [r.get() for r in results]
 
   def expand_n_level(self, level=1, max_nodes_per_relationship=None,
       max_nodes=None):
@@ -625,14 +668,14 @@ class VTGraph(object):
       raise NodeNotFound("Target '%s' not found in nodes" % node_target)
     self.links[(node_source, node_target, connection_type)] = True
 
-  def add_link_if_match(self, node_source, node_target, max_api_quotas=100000, max_depth=30):
+  def add_link_if_match(self, node_source, node_target, max_api_quotas=100000, max_depth=5):
     """Adds a link between node_source and node_target if node_target could be achieved by node_source.
 
     Params:
       node_source (str): source node ID.
       node_targe (str): target node ID.
       max_api_quotas (int, optional) maximum api quotas consumed. Defaults to 100000.
-      max_depth (int, optional): maximum depth. Defaults to 30.
+      max_depth (int, optional): maximum depth. Defaults to 5. Always less than 5
 
     Returns:
       bool: whether relation has been found. 
@@ -648,9 +691,12 @@ class VTGraph(object):
     node_source = self.nodes[node_source]
     node_target = self.nodes[node_target]
 
-    nodes_queue = queue.Queue()
-    nodes_queue.put((node_source, None))
-    found, links = self._recursive_search(nodes_queue, node_target, max_api_quotas+self.api_calls, max_depth)
+    max_depth = max_depth if max_depth <= 5 else 5
+
+    with Manager() as manager:
+      found, links = self._recursive_search_parallel(node_source, node_target, max_api_quotas=max_api_quotas, max_depth=max_depth, nodes_explored=manager.list())
+    
+    self.log(links)
     if found:
       for source_id, target_id, connection_type, target_type in links:
         self.add_node(target_id, target_type)

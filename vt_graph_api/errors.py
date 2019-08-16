@@ -2,7 +2,6 @@
 in this package.
 """
 
-
 class NodeNotFound(Exception):
   
   def __init__(self, msg):
