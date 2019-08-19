@@ -2,6 +2,19 @@ from distutils.util import convert_path
 import sys
 import setuptools
 
+# check python version >2.7.+ and >=3.6.+
+installable = True
+if sys.version_info.major == 3:
+  if sys.version_info.minor < 6:
+    installable = False
+else:
+  if sys.version_info.minor < 7:
+    installable = False 
+
+if not installable:
+  sys.exit('Sorry, this python version is not supported')
+
+# check vt_graph_api version
 vt_graph_api_info = {}
 with open(convert_path('vt_graph_api/version.py')) as ver_file:
   exec(ver_file.read(), vt_graph_api_info)
