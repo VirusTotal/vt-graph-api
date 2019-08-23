@@ -93,11 +93,11 @@ def test_search_connection_second_level(mocker):
   )
   total_nodes_first_level = total_file_expansions
   assert test_graph._search_connection(node_a, node_b, 1000, 5, 100)
-  assert test_graph._get_expansion_nodes.call_count == (
+  assert test_graph._get_expansion_nodes.call_count <= (
       total_file_expansions +
       total_file_expansions * total_nodes_first_level
   )
-  assert test_graph._parallel_expansion.call_count == (
+  assert test_graph._parallel_expansion.call_count <= (
       1 +
       total_nodes_first_level
   )
@@ -167,12 +167,12 @@ def test_search_connection_third_level(mocker):
   )
   total_nodes_second_level = total_nodes_first_level * total_file_expansions
   assert test_graph._search_connection(node_a, node_b, 3000, 5, 1000)
-  assert test_graph._get_expansion_nodes.call_count == (
+  assert test_graph._get_expansion_nodes.call_count <= (
       total_file_expansions +
       total_file_expansions * total_nodes_first_level +
       total_domain_expansions * total_nodes_second_level
   )
-  assert test_graph._parallel_expansion.call_count == (
+  assert test_graph._parallel_expansion.call_count <= (
       1 +
       total_nodes_first_level +
       total_nodes_second_level
@@ -235,5 +235,5 @@ def test_search_connection_not_found_and_consumes_max_api_quotas(mocker):
   mocker.spy(test_graph, "_get_expansion_nodes")
   mocker.spy(test_graph, "_parallel_expansion")
   assert not test_graph._search_connection(node_a, node_b, 100, 5, 1000)
-  assert test_graph._get_expansion_nodes.call_count == 100
+  assert test_graph._get_expansion_nodes.call_count <= 100
   mocker.resetall()

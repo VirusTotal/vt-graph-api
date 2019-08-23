@@ -1,28 +1,28 @@
 """Setup fro vt_graph_api module."""
 
 
-# import sys
+import sys
 import setuptools
 from vt_graph_api.version import __version__
 
 
-# check python version >2.7.+ and >=3.6.+
-# installable = True
-# if sys.version_info.major == 3:
-#   if sys.version_info.minor < 6:
-#     installable = False
-# else:
-#   if sys.version_info.minor < 7:
-#     installable = False
-
-# if not installable:
-#   sys.exit("Sorry, this python version is not supported")
+# check python version >2.7.x and >=3.2.x
+installable = True
+if sys.version_info.major == 3:
+  if sys.version_info.minor < 2:
+    installable = False
+else:
+  if sys.version_info.minor < 7:
+    installable = False
+if not installable:
+  sys.exit("Sorry, this python version is not supported")
 
 with open("README.md", "r") as fh:
   long_description = fh.read()
 
 install_requires = [
-    "requests"
+    "requests",
+    "six"
 ]
 
 setuptools.setup(
