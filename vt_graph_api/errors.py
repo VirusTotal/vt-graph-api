@@ -1,35 +1,31 @@
-"""This module contains all custom exceptions that could be thrown by the methods
-in this package.
-"""
-
-class NodeNotFound(Exception):
-  
-  def __init__(self, msg):
-    """Constructor for NodeNotFound
-    
-    Args:
-        msg (str): Human readable string describing the exception.
-    """
-    super(NodeNotFound, self).__init__(msg)
+"""This module contains all custom exceptions that could be thrown by the methods in this package."""
 
 
-class CollaboratorNotFound(Exception):
+class NodeNotFoundError(Exception):
 
-  def __init__(self, msg):
-    """Constructor for CollaboratorNotFound
-    
-    Args:
-        msg (str): Human readable string describing the exception.
-    """
-    super(CollaboratorNotFound, self).__init__(msg)
+  pass
+
+
+class NodeNotSupportedTypeError(Exception):
+
+  pass
+
+
+class NodeNotSupportedExpansionError(Exception):
+
+  pass
+
+
+class CollaboratorNotFoundError(Exception):
+
+  pass
 
 
 class SaveGraphError(Exception):
 
-  def __init__(self, msg):
-    """Constructor for SaveGraphError
-    
-    Args:
-        msg (str): Human readable string describing the exception.
-    """
-    super(SaveGraphError, self).__init__(msg)
+  pass
+
+
+class SameNodeError(Exception):
+
+  pass

@@ -5,7 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-pyautodoc = "*"
+mock = "*"
+pytest-mock = "*"
 
 [packages]
 requests = "*"

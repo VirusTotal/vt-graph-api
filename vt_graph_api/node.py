@@ -1,66 +1,80 @@
+
+"""Class Node."""
+
+
+from vt_graph_api.errors import NodeNotSupportedTypeError
+
+
 class Node(object):
-  """Node 
-  
+  """Python object wrapper por Node representation.
+
   Attributes:
-    SUPPORTED_NODE_TYPES (tuple(str)): supported node types.
-    NODE_EXPANSIONS (dict(str, list(str))): node expansions in function of node type.
+    node_id (str): node identifier.
+    node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES.
+    expansions_available ([str]): available expansions for the node.
+    attributes (dict): VirusTotal attribute dict.
+    label (str): node name.
   """
 
-  SUPPORTED_NODE_TYPES = ('file', 'url', 'domain', 'ip_address')
+  SUPPORTED_NODE_TYPES = ("file", "url", "domain", "ip_address")
   NODE_EXPANSIONS = {
-    'file': [
-      'bundled_files',
-      'carbonblack_children',
-      'carbonblack_parents',
-      'compressed_parents',
-      'contacted_domains',
-      'contacted_ips',
-      'contacted_urls',
-      'email_parents',
-      'embedded_domains',
-      'embedded_ips',
-      'execution_parents',
-      'itw_domains',
-      'itw_urls',
-      'overlay_parents',
-      'pcap_parents',
-      'pe_resource_parents',
-      'similar_files',
-    ],
-    'url': [
-      'contacted_domains',
-      'contacted_ips',
-      'downloaded_files',
-      'last_serving_ip_address',
-      'network_location',
-      'redirecting_urls',
-    ],
-    'domain': [
-      'communicating_files',
-      'downloaded_files',
-      'referrer_files',
-      'resolutions',
-      'siblings',
-      'subdomains',
-      'urls',
-    ],
-    'ip_address': [
-      'communicating_files',
-      'downloaded_files',
-      'referrer_files',
-      'resolutions',
-      'urls',
-    ],
+      "file": [
+          "bundled_files",
+          "carbonblack_children",
+          "carbonblack_parents",
+          "compressed_parents",
+          "contacted_domains",
+          "contacted_ips",
+          "contacted_urls",
+          "email_parents",
+          "embedded_domains",
+          "embedded_ips",
+          "execution_parents",
+          "itw_domains",
+          "itw_urls",
+          "overlay_parents",
+          "pcap_parents",
+          "pe_resource_parents",
+          "similar_files",
+      ],
+      "url": [
+          "contacted_domains",
+          "contacted_ips",
+          "downloaded_files",
+          "last_serving_ip_address",
+          "network_location",
+          "redirecting_urls",
+      ],
+      "domain": [
+          "communicating_files",
+          "downloaded_files",
+          "referrer_files",
+          "resolutions",
+          "siblings",
+          "subdomains",
+          "urls",
+      ],
+      "ip_address": [
+          "communicating_files",
+          "downloaded_files",
+          "referrer_files",
+          "resolutions",
+          "urls",
+      ],
   }
 
   def __init__(self, node_id, node_type):
     """Creates an instance of a graph object.
-    
+
     Args:
       node_id (str): node identifier.
       node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES
+
+    Raises:
+      NodeNotSupportedTypeError: if node_type not in SUPPORTED_NODE_TYPES
     """
-    assert node_type in self.SUPPORTED_NODE_TYPES
+    if node_type not in self.SUPPORTED_NODE_TYPES:
+      raise NodeNotSupportedTypeError("Node type: %s not supported" % node_type)
     self.node_id = node_id
     self.node_type = node_type
 
@@ -93,7 +107,7 @@ class Node(object):
 
   def __eq__(self, other):
     return isinstance(other, Node) and self.node_id == other.node_id
-      
+
   @staticmethod
   def get_id(node_id):
     return node_id.replace(".", "")

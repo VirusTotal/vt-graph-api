@@ -1,16 +1,44 @@
+"""Class VTGraph."""
+
+
+import functools
 import json
-import sys
+import logging
+import multiprocessing
+import multiprocessing.pool
+import re
 import requests
-from multiprocessing.pool import ThreadPool
-from multiprocessing import Value, Manager
-from six import iterkeys
-from .errors import CollaboratorNotFound, NodeNotFound, SaveGraphError
-from .node import Node
-from .version import __version__ as VERSION
+import six
+from vt_graph_api.errors import CollaboratorNotFoundError
+from vt_graph_api.errors import NodeNotFoundError
+from vt_graph_api.errors import NodeNotSupportedExpansionError
+from vt_graph_api.errors import SameNodeError
+from vt_graph_api.errors import SaveGraphError
+from vt_graph_api.node import Node
+from vt_graph_api.version import __version__ as VERSION
 
 
 class VTGraph(object):
-  
+  """Python object wrapper for VTGraph.
+
+  Attributes:
+    api_key (str): VT API Key.
+    graph_id (str): graph identifier for VT.
+    name (str): graph title.
+    api_calls (int): total api calls consumed by graph.
+    private (bool): wether graph is private or not.
+    user_editors ([str]): list with users that can edit graph.
+    user_viewers ([str]): list with users that can see graph.
+    group_editors ([str]): list with groups that can edit graph.
+    group_viewers ([str]): list with groups that can see graph.
+    verbose (bool): if True log will be displayed.
+    nodes (dict): graph nodes.
+    links (dict): graph links.
+  """
+
+  MAX_API_EXPANSION_LIMIT = 40
+  MAX_PARALLEL_REQUESTS = 1000
+
   def __init__(
       self,
       api_key,
@@ -22,18 +50,32 @@ class VTGraph(object):
       group_viewers=None,
       verbose=False):
     """Creates a VT Graph Instance.
-    
+
     Args:
       api_key (str): VT API Key
       name (str, optional): graph title. Defaults to "".
       private (bool, optional): true for private graphs. You need to have
-        Private Graph premium feature enabled in your subscription. Defaults to False.
-      user_editors ([str], optional): usernames that can edit the graph. Defaults to None.
-      user_viewers ([str], optional): usernames that can view the graph. Defaults to None.
-      group_editors ([str], optional): groups that can edit the graph. Defaults to None.
-      group_viewers ([str], optional): groups that can view the graph. Defaults to None.
-      verbose (bool, optional): true for printing log messages. Defaults to False.
-    
+        Private Graph premium feature enabled in your subscription. Defaults
+        to False.
+      user_editors ([str], optional): usernames that can edit the graph.
+        Defaults to None.
+      user_viewers ([str], optional): usernames that can view the graph.
+        Defaults to None.
+      group_editors ([str], optional): groups that can edit the graph.
+        Defaults to None.
+      group_viewers ([str], optional): groups that can view the graph.
+        Defaults to None.
+      verbose (bool, optional): true for printing log messages.
+        Defaults to False.
+
+    Examples:
+      >>> VTGraph(
+      ... API_KEY,
+      ... verbose=True,
+      ... private=True,
+      ... name="First Graph API test")
+      <vt_graph_api.graph.VTGraph object at 0x7fd57ba88630>
+
     This call does NOT consume API quota.
     """
     self.api_key = api_key
@@ -51,9 +93,15 @@ class VTGraph(object):
     self.nodes = {}
     self.links = {}
 
+    self._url_re = re.compile(r"https?://", re.IGNORECASE)
+    self._sha1_re = re.compile(r"^[0-9a-fA-F]{40}$")
+    self._md5_re = re.compile(r"'^[0-9a-fA-F]{32}$")
     self._index = 0
+    self._logger = logging.getLogger("vt_graph")
+    self._logger.addHandler(logging.StreamHandler())
+    self._logger.setLevel(logging.INFO)
 
-  def log(self, msg):
+  def _log(self, msg):
     """Prints if verbose is enabled.
 
     Args:
@@ -62,12 +110,11 @@ class VTGraph(object):
     This call does NOT consume API quota.
     """
     if self.verbose:
-      print(msg)
+      self._logger.info(msg)
 
   def _add_node_to_output(self, output, node_id):
-    """Add the node with the given node_id to the output in order to send
-    information to VT API.
-    
+    """Add the node with the given node_id to the output in order to send information to VT API.
+
     Args:
       output (dict): graph structure in json representation to be consumed
         by VT API.
@@ -75,11 +122,11 @@ class VTGraph(object):
     """
     node = self.nodes[node_id]
     node_data = {
-      "type": node.node_type,
-      "entity_id": node.node_id,
-      "index": self._index,
-      "x": 0,
-      "y": 0,
+        "type": node.node_type,
+        "entity_id": node.node_id,
+        "index": self._index,
+        "x": 0,
+        "y": 0,
     }
 
     if node.label:
@@ -89,93 +136,168 @@ class VTGraph(object):
       # File.
       if node.node_type == "file":
         has_detections = (
-          node.attributes['last_analysis_stats']['malicious'] +
-          node.attributes['last_analysis_stats']['suspicious'])
+            node.attributes["last_analysis_stats"]["malicious"] +
+            node.attributes["last_analysis_stats"]["suspicious"]
+        )
         entity_attributes = {
-          "has_detections": has_detections,
+            "has_detections": has_detections,
         }
 
-        if 'type_tag' in node.attributes:
-          entity_attributes['type_tag'] = node.attributes['type_tag']
+        if "type_tag" in node.attributes:
+          entity_attributes["type_tag"] = node.attributes["type_tag"]
 
         node_data["entity_attributes"] = entity_attributes
 
       # Ip Address.
       elif (node.node_type == "ip_address" and
-            'country' in node.attributes):
+            "country" in node.attributes):
         entity_attributes = {
-          "country": node.attributes['country'],
+            "country": node.attributes["country"],
         }
         node_data["entity_attributes"] = entity_attributes
 
       # Urls.
       elif node.node_type == "url":
         has_detections = (
-          node.attributes['last_analysis_stats']['malicious'] +
-          node.attributes['last_analysis_stats']['suspicious'])
+            node.attributes["last_analysis_stats"]["malicious"] +
+            node.attributes["last_analysis_stats"]["suspicious"])
         entity_attributes = {
-          "has_detections": has_detections,
+            "has_detections": has_detections,
         }
         node_data["entity_attributes"] = entity_attributes
 
-    output['data']['attributes']['nodes'].append(node_data)
+    output["data"]["attributes"]["nodes"].append(node_data)
     self._index += 1
 
   def _add_viewers(self):
     """Adds editors to the graph.
 
     Raises:
-      CollaboratorNotFound: if any of the collaborators don't exist.
+      CollaboratorNotFound: if any of the collaborators don"t exist.
     """
     data = []
     for editor in self.user_viewers:
       data.append({
-        "id": editor,
-        "type": "user"
+          "id": editor,
+          "type": "user"
       })
     for editor in self.group_viewers:
       data.append({
-        "id": editor,
-        "type": "group"
+          "id": editor,
+          "type": "group"
       })
 
     if not data:
       return
 
-    url = "https://www.virustotal.com/api/v3/graphs/%s/viewers" % self.graph_id
-    headers = {'x-apikey': self.api_key, 'x-tool': VERSION}
-    response = requests.post(url, headers=headers, data=json.dumps({"data": data}))
+    url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/viewers".format(
+        graph_id=self.graph_id
+    )
+    headers = {"x-apikey": self.api_key, "x-tool": VERSION}
+    response = requests.post(
+        url,
+        headers=headers,
+        data=json.dumps({"data": data})
+    )
 
     if response.status_code != requests.codes.ok:
-      raise CollaboratorNotFound()
+      raise CollaboratorNotFoundError()
 
   def _add_editors(self):
     """Adds editors to the graph.
 
     Raises:
-      CollaboratorNotFound: if any of the collaborators don't exist.
+      CollaboratorNotFound: if any of the collaborators don"t exist.
     """
     data = []
     for editor in self.user_editors:
       data.append({
-        "id": editor,
-        "type": "user"
+          "id": editor,
+          "type": "user"
       })
     for editor in self.group_editors:
       data.append({
-        "id": editor,
-        "type": "group"
+          "id": editor,
+          "type": "group"
       })
 
     if not data:
       return
 
-    url = "https://www.virustotal.com/api/v3/graphs/%s/editors" % self.graph_id
-    headers = {'x-apikey': self.api_key, 'x-tool': VERSION}
-    response = requests.post(url, headers=headers, data=json.dumps({"data": data}))
+    url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/editors".format(
+        graph_id=self.graph_id
+    )
+    headers = {"x-apikey": self.api_key, "x-tool": VERSION}
+    response = requests.post(
+        url,
+        headers=headers,
+        data=json.dumps({"data": data})
+    )
 
     if response.status_code != requests.codes.ok:
-      raise CollaboratorNotFound()
+      raise CollaboratorNotFoundError()
+
+  def _fetch_information(self, node):
+    """Add information from VT to node.
+
+    Args:
+        node (Node): node to be searched in VT.
+    """
+    headers = self._get_headers()
+    end_point = self._get_api_endpoint(node.node_type)
+    url = "https://www.virustotal.com/api/v3/{end_point}/{node_id}".format(
+        end_point=end_point,
+        node_id=node.node_id
+    )
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+      data = response.json()
+    else:
+      data = {}
+      self._log(
+          "Request to '{url}' with '{status_code}' status code"
+          .format(
+              url=url,
+              status_code=response.status_code
+          )
+      )
+    if "attributes" in data.get("data", dict()):
+      node.add_attributes(data["data"]["attributes"])
+
+  def _send_graph_to_vt(self, output):
+    """Send computed graph to VT in order to save it.
+
+    Args:
+      output (dict): graph in VT api readable format.
+
+    Raises:
+        SaveGraphError: if something went bad when saving the graph.
+    """
+    self._log("Saving local graph")
+    url = "https://www.virustotal.com/api/v3/graphs"
+    headers = {"x-apikey": self.api_key, "x-tool": VERSION}
+    response = requests.post(url, headers=headers, data=json.dumps(output))
+    if response.status_code == 200:
+      data = response.json()
+      if "data" in data:
+        self.graph_id = data["data"]["id"]
+      else:
+        self._log("Saving graph error: {data}".format(data=data))
+        raise SaveGraphError(str(data))
+    else:
+      self._log(
+          "Saving graph error: {status_code} status code"
+          .format(
+              status_code=response.status_code
+          )
+      )
+      raise SaveGraphError(
+          "Saving graph error: {status_code} status code"
+          .format(
+              status_code=response.status_code
+          )
+      )
+    self._log("Sending Graph to VT")
 
   def save_graph(self):
     """Saves the graph into VirusTotal Graph database.
@@ -185,25 +307,25 @@ class VTGraph(object):
 
     Raises:
       CollaboratorNotFound: if any of the collaborators is not found in
-      VirusTotal user and group database.
+        VirusTotal user and group database.
       SaveGraphError: if something went bad when saving the graph.
     """
-    self.log("Saving the graph")
+    self._log("Saving the graph")
     self._index = 0
     added = set()
     output = {
-      "data": {
-        "attributes": {
-          "graph_data": {
-            "description": self.name,
-            "version": VERSION,
-          },
-          "private": self.private,
-          "nodes": [],
-          "links": [],
+        "data": {
+            "attributes": {
+                "graph_data": {
+                    "description": self.name,
+                    "version": VERSION,
+                },
+                "private": self.private,
+                "nodes": [],
+                "links": [],
+            },
+            "type": "graph",
         },
-        "type": "graph",
-      },
     }
 
     for (source_id, target_id, expansion) in self.links:
@@ -213,15 +335,17 @@ class VTGraph(object):
         added.add(source_id)
 
       # Relationship node.
-      relationship_id = "relationships_%s_%s" % (
-          expansion, Node.get_id(source_id))
+      relationship_id = "relationships_{expansion}_{node_id}".format(
+          expansion=expansion,
+          node_id=Node.get_id(source_id)
+      )
       if relationship_id not in added:
-        output['data']['attributes']['nodes'].append({
-          "type": "relationship",
-          "entity_id": relationship_id,
-          "index": self._index,
-          "x": 0,
-          "y": 0,
+        output["data"]["attributes"]["nodes"].append({
+            "type": "relationship",
+            "entity_id": relationship_id,
+            "index": self._index,
+            "x": 0,
+            "y": 0,
         })
         added.add(relationship_id)
         self._index += 1
@@ -232,15 +356,15 @@ class VTGraph(object):
         added.add(target_id)
 
       # Links
-      output['data']['attributes']['links'].append({
-        "connection_type": expansion,
-        "source": source_id,
-        "target": relationship_id,
+      output["data"]["attributes"]["links"].append({
+          "connection_type": expansion,
+          "source": source_id,
+          "target": relationship_id,
       })
-      output['data']['attributes']['links'].append({
-        "connection_type": expansion,
-        "source": relationship_id,
-        "target": target_id,
+      output["data"]["attributes"]["links"].append({
+          "connection_type": expansion,
+          "source": relationship_id,
+          "target": target_id,
       })
 
     for node_id in self.nodes:
@@ -248,33 +372,16 @@ class VTGraph(object):
         self._add_node_to_output(output, node_id)
         added.add(node_id)
 
-    self.log("Saving local graph")
-    f = open("output.json", 'w')
-    f.write(json.dumps(output))
-    f.close()
-
-    self.log("Sending Graph to VT")
-    url = "https://www.virustotal.com/api/v3/graphs"
-    headers = {'x-apikey': self.api_key, 'x-tool': VERSION}
-    response = requests.post(url, headers=headers, data=json.dumps(output))
-    if response.status_code == 200:
-      data = response.json()
-      if 'data' in data:
-        self.graph_id = data['data']['id']
-      else:
-        self.log("Saving graph error: %s" % data)
-        raise SaveGraphError(str(data))
-    else:
-      self.log("Saving graph error: %s status code" % response.status_code)
-      raise SaveGraphError("Saving graph error: %s status code" % response.status_code)
-
+    self._send_graph_to_vt(output)
     self._add_editors()
     self._add_viewers()
 
   def _increment_api_counter(self):
     """Increments api counter."""
     self.api_calls += 1
-    self.log("API counter incremented. Total value: %s" % self.api_calls)
+    self._log("API counter incremented. Total value: {api_calls}".format(
+        api_calls=self.api_calls
+    ))
 
   def _get_file_sha_256(self, node_id):
     """Return sha256 hash for node_id with file type if matches found in VT, else return simple node_id.
@@ -285,13 +392,19 @@ class VTGraph(object):
 
     Returns:
       str: sha256 of the given file node_id.
+
+    It consumes API quota.
     """
     headers = self._get_headers()
-    url = "https://www.virustotal.com/api/v3/files/%s" % node_id
+    url = "https://www.virustotal.com/api/v3/files/{node_id}".format(
+        node_id=node_id
+    )
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
       data = response.json()
-      node_id = data.get('data', dict()).get('attributes', dict()).get('sha256', node_id)
+      node_id = data.get("data", dict()).get(
+          "attributes", dict()).get("sha256", node_id)
+    self._increment_api_counter()
     return node_id
 
   def _get_url_id(self, node_id):
@@ -303,90 +416,125 @@ class VTGraph(object):
 
     Returns:
       str: url identifier for VT api.
+
+    It consumes API quota.
     """
     headers = self._get_headers()
     url = "https://www.virustotal.com/api/v3/urls"
-    response = requests.post(url, data={'url':node_id}, headers=headers)
+    response = requests.post(url, data={"url": node_id}, headers=headers)
     if response.status_code == 200:
       data = response.json()
-      node_id = data.get('data', dict()).get('id', "u-'%s'-u" % node_id).split('-')
+      node_id = data.get("data", dict()).get(
+          "id", "u-'{node_id}'-u".format(node_id=node_id)).split("-")
       if len(node_id) > 1:
         node_id = node_id[1]
+    self._increment_api_counter()
     return node_id
-    
 
   def _get_node_id(self, node_id):
     """Return correct node_id in case of file node with no sha256 hash or url instead of sha256.
 
     Args:
-      node_id (str) identifier of the node. See the top level documentation
+      node_id (str): identifier of the node. See the top level documentation
         to understand IDs.
 
     Returns:
       str: the correct node_id for the given identifier.
+
+    It consumes API quota.
     """
 
-    if node_id in iterkeys(self.nodes):
-      return node_id 
+    if re.match(self._url_re, node_id):
+      new_id = self._get_url_id(node_id)
+      if new_id in six.iterkeys(self.nodes):
+        return new_id
 
-    new_id = self._get_url_id(node_id)
-    if new_id in iterkeys(self.nodes):
-      return new_id
+    if re.match(self._sha1_re, node_id) or re.match(self._md5_re, node_id):
+      new_id = self._get_file_sha_256(node_id)
+      if new_id in six.iterkeys(self.nodes):
+        return new_id
 
-    new_id = self._get_file_sha_256(node_id)
-    if new_id in iterkeys(self.nodes):
-      return new_id
-    
-    return ""
+    return node_id
 
-  def _get_expansion_nodes(self, node, expansion, max_nodes_per_relationship=1000000, cursor=None):
+  def _get_expansion_nodes(self, node, expansion,
+                           max_nodes_per_relationship, cursor=None,
+                           max_retries=3):
     """Returns the nodes to be attached to given node with the given expansion.
 
     Args:
       node (Node): node to be expanded
       expansion (str): expansion name. For example: compressed_parents for
         nodes of type file.
-      max_nodes_per_relationship (int, optional): max number of nodes that will
-        be expanded per relationship. Minimum value will be 10. Defaults to 1000000.
+      max_nodes_per_relationship (int): max number of nodes that will
+        be expanded per relationship. Minimum value will be 10.
+        Defaults to 1000000.
       cursor (str, optional): VT relationships cursor. Defaults to None.
+      max_retries (int, optional): maximum retries for API request.
 
     Returns:
-      (list(Node), int): a list with the nodes produced by the given node expansion in the given expansion type,
-        and number with api quotas consumed.
+      (list(Node), int): a list with the nodes produced by the given node
+        expansion in the given expansion type, and number with api
+        quotas consumed.
     """
-    self.log("Expanding node '%s' with expansion '%s'" % (node.node_id, expansion))
     expansion_nodes = []
-
     parent_node_id = node.node_id
     parent_node_type = node.node_type
     end_point = self._get_api_endpoint(parent_node_type)
     consumed_quotas = 1
+    request_try = 0
+    has_response = False
+    limit = min(max_nodes_per_relationship, self.MAX_API_EXPANSION_LIMIT)
 
-    url = "https://www.virustotal.com/api/v3/%s/%s/%s" % (
-        end_point, node.node_id, expansion)
+    url = "https://www.virustotal.com/api/v3/{end_point}/{node_id}/{expansion}?limit={limit}".format(
+        end_point=end_point,
+        node_id=node.node_id,
+        expansion=expansion,
+        limit=limit
+    )
     if cursor:
-      url = "%s?cursor=%s" % (url, cursor)
-    headers = {'x-apikey': self.api_key, 'x-tool': 'graph-api-v1'}
-    response = requests.request("GET", url, headers=headers, timeout=40)
-    if response.status_code == 200:
-      data = response.json()
-    else:
-      data = {}
-      self.log("Request to '%s' with '%s' status code" % (url, response.status_code))
+      url = "{url}?cursor=%{cursor}".format(url=url, cursor=cursor)
+    headers = {"x-apikey": self.api_key, "x-tool": "graph-api-v1"}
+
+    # if request fail, it will be retried at least three times
+    while request_try < max_retries and not has_response:
+      try:
+        self._log(
+            "Expanding node {node_id} with expansion {expansion}"
+            .format(
+                node_id=node.node_id,
+                expansion=expansion
+            )
+        )
+        response = requests.get(url, headers=headers, timeout=40)
+        self._increment_api_counter()
+        has_response = True
+        if response.status_code == 200:
+          data = response.json()
+        else:
+          data = {}
+          self._log(
+              "Request to {url} with {status_code} status code"
+              .format(
+                  url=url, status_code=response.status_code
+              )
+          )
+      except requests.ConnectionError:
+        request_try += 1
+
     # Add cursor data.
-    has_more = data.get('meta', {})
+    has_more = data.get("meta", {})
 
     # Some results return just one element back.
-    if 'data' not in data:
+    if "data" not in data:
       new_nodes = []
-    elif type(data['data']) == dict:
-      new_nodes = [data['data']]
+    elif isinstance(data["data"], dict):
+      new_nodes = [data["data"]]
     else:
-      new_nodes = data['data']
+      new_nodes = data["data"]
 
     for node_data in new_nodes:
-      child_node_id = node_data['id']
-      child_node_type = node_data['type']
+      child_node_id = node_data["id"]
+      child_node_type = node_data["type"]
 
       # Translation for resolutions.
       if child_node_type == "resolution":
@@ -396,121 +544,179 @@ class VTGraph(object):
         else:
           child_node_type = "domain"
       new_node = Node(child_node_id, child_node_type)
-      if 'attributes' in node_data:
-        new_node.add_attributes(node_data['attributes'])
+      if "attributes" in node_data:
+        new_node.add_attributes(node_data["attributes"])
       expansion_nodes.append(new_node)
-    
-    if has_more:
-      cursor = data['meta']['cursor']
-      next_max = max_nodes_per_relationship - len(data['data'])
-      if next_max > 0:
-        _expansion_nodes, _consumed_quotas = self._get_expansion_nodes(node, expansion, max_nodes_per_relationship=next_max, 
-                                              cursor=cursor)
-        expansion_nodes += _expansion_nodes
-        consumed_quotas += consumed_quotas
 
-    self._increment_api_counter()
+    if has_more:
+      cursor = data["meta"]["cursor"]
+      next_max = max_nodes_per_relationship - len(data["data"])
+      if next_max > 0:
+        expansion_nodes_, consumed_quotas_ = self._get_expansion_nodes(
+            node,
+            expansion, max_nodes_per_relationship=next_max,
+            cursor=cursor
+        )
+        expansion_nodes += expansion_nodes_
+        consumed_quotas += consumed_quotas_
+
     return expansion_nodes, consumed_quotas
 
-  def _recursive_search_parallel(self, node_source, node_target, max_api_quotas=10000, depth=0, max_depth=5, 
-    path=list(), nodes_explored=list(), found=Value('i', 0)):
-    """Search connection between node source and node_target.
-    
-                          node_source                             | depth 0 (first node) 
-                             +-+                                  |
-                             |-|                                  | 
-               +----------+-------+-----------+                   |
-               |          |   |   |           |                   |
-               |          |   |   |           |                   |
-               |          v   v   v           |                   |
-    thread 1<-+-+         X   X   X          +-+ ----> thread n   | depth 1 (all nodes produced by expands 
-              |-|                            |-|                  |   (node_source in all expansion's types)
-          +---------+                   +-----------+             |
-          |         X                   X           X             |
-     +---+-+       +-+                 +-+         +-+            | depth 2 
-     |   +-+       +-+                 +-+         +-+            |
-    +-+                                                           |
-    +-+ <--- node_target                                          | depth 3
+  def _parallel_expansion(self, node_target, solution_path, visited_nodes,
+                          max_api_quotas, lock, max_depth, item):
+    """Parallelize node expansion synchronizing api quotas consumed.
 
-    This algorithm is based on breadth first search. When target node is achived by source, the synchronized value `found` is
-    set to 1 in order to stop the others threads.
-    
+    Args:
+      node_target (Node): target node.
+      solution_path (multiprocessing.managers.ListProxy): synchronized
+        list with the path.
+      visited_nodes (multiprocessing.managers.ListProxy): synchronized
+        list with the nodes.
+      max_api_quotas (multiprocessing.synchronize.Value): synchronized
+        value with max api quotas.
+      lock (multiprocessing.synchronize.Lock): lock.
+      max_depth (int): max depth.
+      item (Node, list, int): structure with the node, path to
+        node and actual node depth.
+
+    Returns:
+      list(tuple(Node, list, int)): list with the result of the expansions.
+    """
+
+    node = item[0]
+    path = item[1]
+    depth = item[2]
+
+    expansion_threads = []
+    expansion_nodes = []
+    expansions = node.expansions_available
+    expansion_pool = multiprocessing.pool.ThreadPool(processes=len(expansions))
+    has_quota = False
+
+    if depth + 1 < max_depth:
+      for expansion in expansions:
+        # syncrhonize api quotas consumed
+        lock.acquire()
+        max_api_quotas.value -= 1
+        if max_api_quotas.value > -1:
+          has_quota = True
+        else:
+          i = len(expansions)
+        lock.release()
+        # release api quotas
+
+        if has_quota:
+          expansion_threads.append(
+              expansion_pool.apply_async(
+                  self._get_expansion_nodes, (node, expansion, 40)
+              )
+          )
+          has_quota = False
+
+      i = 0
+      while i < len(expansion_threads) and not solution_path:
+        nodes__, _ = expansion_threads[i].get()
+        expansion_type = expansions[i]
+        if node_target not in nodes__:
+          not_visited_nodes = (node for node in nodes__
+                               if node not in visited_nodes)
+          for node_ in not_visited_nodes:
+            expansion_nodes.append(
+                (
+                    node_,
+                    path + [(node.node_id,
+                             node_.node_id,
+                             expansion_type,
+                             node_.node_type)],
+                    depth + 1)
+                )
+        else:
+          path.append(
+              (
+                  node.node_id,
+                  node_target.node_id,
+                  expansions[i],
+                  node_target.node_type
+              )
+          )
+          solution_path.extend(path)
+        i += 1
+
+    expansion_pool.close()
+    return expansion_nodes
+
+  def _search_connection(self, node_source, node_target,
+                         max_api_quotas, max_depth, max_ratio):
+    """Search connection between node source and node_target.
+
+                          node_source
+                             +-+
+                             |-|
+               +----------+-------+-----------+
+               |          |   |   |           |
+               |          |   |   |           |
+               |          v   v   v           |
+    thread 1<-+-+         X   X   X          +-+ ----> thread n
+              |-|                            |-|
+          +---------+                   +-----------+
+          |         X                   X           X
+     +---+-+       +-+                 +-+         +-+
+     |   +-+       +-+                 +-+         +-+
+    +-+
+    +-+ <--- node_target
+
+    This algorithm is based on breadth first search.
+
     Args:
       node_source (Node): start node.
       node_target (Node): last node.
-      max_api_quotas (int, optional): max number of api quotas. Defaults to 10000.
-      depth (int, optional): actual depth. Defaults to 0.
+      max_api_quotas (int, optional): max number of api quotas.
+        Defaults to 10000.
       max_depth (int, optional): max hops between nodes. Defaults to 5.
-      path (list((str, str, str, str)), optional): links from node source to node target. Defaults to list().
-      nodes_explored (list(Node), optional): Nodes that have been explored before. Defaults to list().
-      found (Value, optional): synchronized value between threads. Defaults to Value('i', 0).
-    
+      max_ratio (int): max number of nodes that could be processed
+        in parallel. Max: MAX_PARALLEL_REQUESTS.
     Returns:
-      (bool, list((str, str, str, str))): wheter path found and list with the computed path from node_source to 
-      node_target
+      list((str, str, str, str)): the computed path from node_source to
+        node_target
     """
-    self.log(("search %s | depth: %s" % (node_source.node_id, depth)))
 
-    quotas_consumed = 0
-    success = False
+    max_ratio = min(max_ratio, self.MAX_PARALLEL_REQUESTS)
+    queue = [(node_source, [], 0)]
+    max_api_quotas = multiprocessing.Value("i", max_api_quotas)
+    lock = multiprocessing.Lock()
+    path = []
 
-    # if node_source has been explored before, it won't be explored againt
-    if node_source not in nodes_explored:
-      nodes_explored.append(node_source)
-      expansions = Node.NODE_EXPANSIONS.get(node_source.node_type)
-      total_nodes_expanded = 0
-      threads = []
-      pools = []
-      expansion_nodes = []
-      i = 0
+    with multiprocessing.Manager() as manager:
+      solution_path = manager.list()
+      visited_nodes = manager.list([node_source])
+      expand_parallel_partial_ = functools.partial(
+          self._parallel_expansion,
+          node_target,
+          solution_path,
+          visited_nodes,
+          max_api_quotas,
+          lock,
+          max_depth
+      )
 
-      # node_source will be expanded in all expansion's type if there's api quotas enough
-      while quotas_consumed < max_api_quotas and i < len(expansions) and not found.value:
-        try:
-          __nodes, quotas = self._get_expansion_nodes(node_source, expansions[i], max_nodes_per_relationship=40)
-          quotas_consumed += quotas
-          total_nodes_expanded += len(__nodes)
-          if node_target not in __nodes:
-            if len(__nodes) > 0:
-                expansion_nodes.append((__nodes, expansions[i]))
-          else:
-            found.value = 1
-            success = True
-            path.append((node_source.node_id, node_target.node_id, expansions[i], node_target.node_type))
-        except requests.ConnectionError:
-          self.log('connection timed out when expandind %s with %s' % (node_source.node_id, expansions[i]))
-        i += 1
-
-      # if target node not in the nodes expanded, they will be expanded recursively
-      if not success and total_nodes_expanded > 0:
-        # once node_source has been explored, the nodes of the next level of the dsf algorithm will have the api quotas left
-        # divided by the number of nodes which has been the result of the previous expansions.
-        expansion_max_api_quota = int((max_api_quotas - quotas_consumed) / (max(total_nodes_expanded, 1)))
-        # thread will be launched for each expansion node in a threadpool
-        pool = ThreadPool(processes=total_nodes_expanded)
-        for __nodes, expansion_type in expansion_nodes:
-          for node in __nodes:
-            threads.append(pool.apply_async(self._recursive_search_parallel, (node, node_target, expansion_max_api_quota, 
-                                            depth + 1, max_depth, 
-                                            path + [(node_source.node_id, node.node_id, expansion_type, node.node_type)], 
-                                            nodes_explored, found)))
-        # wait for the threads in order to get their results
-        results = [th.get() for th in threads]
+      while max_api_quotas.value > 0 and not path and queue:
+        max_nodes = min(len(queue), max_ratio)
+        pool = multiprocessing.pool.ThreadPool(processes=max_nodes)
+        visited_nodes.extend([node[0] for node in queue])
+        results = pool.map(expand_parallel_partial_, queue)
+        queue = []
+        for list_ in results:
+          for item in list_:
+            queue.append(item)
+        path = list(solution_path)
         pool.close()
-        # once al threads have been finished, let's check the results
-        i = 0
-        while i < len(results) and not success:
-          __success, __path = results[i]
-          if __success:
-            success = __success 
-            path = __path
-          i += 1
-    # finally return if there's connection and the path
-    return success, path
-        
+        pool.join()
+
+    return path
+
   def _get_headers(self):
     """Returns the request headers."""
-    return {'x-apikey': self.api_key, 'x-tool': VERSION}
+    return {"x-apikey": self.api_key, "x-tool": VERSION}
 
   def _get_api_endpoint(self, node_type):
     """Returns the api end point."""
@@ -535,33 +741,20 @@ class VTGraph(object):
 
     This call consumes API quota if fetch_information=True.
     """
-    if node_type == 'file' and len(node_id) != 64:
+    if node_type == "file" and len(node_id) != 64:
       node_id = self._get_file_sha_256(node_id)
-    if node_type == 'url':
+    if node_type == "url":
       node_id = self._get_url_id(node_id)
-          
-    if node_id not in iterkeys(self.nodes):
+    if node_id not in six.iterkeys(self.nodes):
       new_node = Node(node_id, node_type)
       if label:
         new_node.add_label(label)
       if fetch_information:
-        headers = self._get_headers()
-        end_point = self._get_api_endpoint(node_type)
-        url = "https://www.virustotal.com/api/v3/%s/%s" % (
-            end_point, node_id)
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-          data = response.json()
-        else:
-          data = {}
-          self.log("Request to '%s' with '%s' status code" % (url, response.status_code))
-        if 'attributes' in data.get('data', dict()):
-          new_node.add_attributes(data['data']['attributes'])
+        self._fetch_information(new_node)
       self.nodes[node_id] = new_node
     return self.nodes[node_id]
 
-
-  def expand(self, node_id, expansion, max_nodes_per_relationship=1000000):
+  def expand(self, node_id, expansion, max_nodes_per_relationship=40):
     """Expands the given node with the given expansion.
 
     Args:
@@ -570,56 +763,83 @@ class VTGraph(object):
       expansion (str): expansion name. For example: compressed_parents for
         nodes of type file.
       max_nodes_per_relationship (int, optional): max number of nodes that will
-        be expanded per relationship. Minimum value will be 10. Defaults to 1000000.
-    
+        be expanded per relationship. Minimum value will be 10.
+        Defaults to 40.
+
     Raises:
       NodeNotFound: if the node is not found.
+      NodeNotSupportedExpansionError: if node cannot be expanded with the given
+        expansion.
 
     This call consumes API quota.
     """
     node_id = self._get_node_id(node_id)
-    if node_id not in iterkeys(self.nodes):
-      raise NodeNotFound("node '%s' not found in nodes" % node_id)
+    if node_id not in six.iterkeys(self.nodes):
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_id
+          )
+      )
     node = self.nodes[node_id]
 
-    new_nodes, _ = self._get_expansion_nodes(node, expansion, max_nodes_per_relationship)
+    if expansion not in node.expansions_available:
+      raise NodeNotSupportedExpansionError(
+          "node {node_id} cannot be expanded with {expansion} expansion"
+          .format(
+              node_id=node_id,
+              expansion=expansion
+          )
+      )
+
+    new_nodes, _ = self._get_expansion_nodes(
+        node,
+        expansion,
+        max_nodes_per_relationship
+    )
     # Adds data to graph.
     for new_node in new_nodes:
       self.add_node(new_node.node_id, new_node.node_type)
       self.add_link(node_id, new_node.node_id, expansion)
-    
-  def expand_one_level(self, node, max_nodes_per_relationship=None):
-    """Expands 20 relations for each relationship that we know in VirusTotal for
-    the give node.
+
+  def expand_one_level(self, node_id, max_nodes_per_relationship=40):
+    """Expands 20 relations for each relationship that we know in VirusTotal for the give node.
 
     Args:
-      node (str): node ID.
+      node_id (str): node ID.
       max_nodes_per_relationship (int, optional): max number of nodes that will
         be expanded per relationship. Defaults to None.
 
     Returns:
       bool: whether there are more expansions available in this node.
 
+    Raises:
+      NodeNotFound: if the node is not found.
+
     It consumes API quota, one for each expansion available for the node.
     """
-    results = []
-    node = self._get_node_id(node)
-    pool = ThreadPool(processes=4)
-    for expansion in self.nodes[node].expansions_available:
-      results.append(
-          self.pool.apply_async(
-              self.expand,
-              (node, expansion, max_nodes_per_relationship))
+    node_id = self._get_node_id(node_id)
+
+    if node_id not in six.iterkeys(self.nodes):
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_id
           )
-      # self.expand(
-      #     node, expansion, max_nodes_per_relationship=max_nodes_per_relationship)
+      )
 
-    # Wait for results.
-    [r.get() for r in results]
+    expansions_available = self.nodes[node_id].expansions_available
+    pool = multiprocessing.pool.ThreadPool(processes=len(expansions_available))
+    for expansion in expansions_available:
+      pool.apply_async(
+          self.expand,
+          (node_id, expansion, max_nodes_per_relationship)
+      )
     pool.close()
+    pool.join()
 
-  def expand_n_level(self, level=1, max_nodes_per_relationship=None,
-      max_nodes=None):
+  def expand_n_level(self, level=1, max_nodes_per_relationship=40,
+                     max_nodes=10000):
     """Expands all the nodes in the graph `level` levels.
 
     For example:
@@ -630,93 +850,150 @@ class VTGraph(object):
       to the three nodes, the new discovered nodes will be expanded as well.
 
     Args:
-      level (int, optional): number of layers down the graph that will be expanded.
-        Defaults to 1.
+      level (int, optional): number of layers down the graph that will be
+        expanded. Defaults to 1.
       max_nodes_per_relationship: (int, optional): max number of nodes that will
-        be expanded per relationship. Defaults to None.
+        be expanded per relationship. Defaults to 40.
       max_nodes (int, optional): max number of nodes that will be added to the
         graph. The expansion will stop as soon as any expansion result adds more
-        than this limit to the graph. Defaults to None.
-      
+        than this limit to the graph. Defaults to 10000.
+
     This call consumes API quota, one for each node expansion.
     """
-    pending = {node_id for node_id in iterkeys(self.nodes)}
+    pending = {node_id for node_id in six.iterkeys(self.nodes)}
     visited = set()
     for _ in range(level):
       for node_id in pending:
         self.expand_one_level(
-          node_id, max_nodes_per_relationship=max_nodes_per_relationship)
+            node_id, max_nodes_per_relationship=max_nodes_per_relationship
+        )
         visited.add(node_id)
         if max_nodes and len(self.nodes) > max_nodes:
-          self.log(
-              "Hit the maximum limits, stopping the calculation. Node len: %s" %
-              len(self.nodes))
+          self._log(
+              "Hit the maximum limits, " +
+              "stopping the calculation. Node len: {len_nodes}"
+              .format(
+                  len_nodes=len(self.nodes)
+              )
+          )
           return
       pending = {node_id
-                 for node_id in iterkeys(self.nodes)
+                 for node_id in six.iterkeys(self.nodes)
                  if node_id not in visited}
 
   def add_link(self, node_source, node_target, connection_type):
     """Adds a link between node_source and node_target with the connection_type.
 
-    If the source or target node don't exist, an exception will be raised.
+    If the source or target node don"t exist, an exception will be raised.
 
     Args:
       node_source (str): source node ID.
-      node_targe (str): target node ID.
-      connection_type (str): connection type. For example: compressed_parent.
+      node_target (str): target node ID.
+      connection_type (str): connection type, for example
+        compressed_parent.
 
     Raises:
-      NodeNotFound: if the node is not found.
+      NodeNotFound: if any node is not found.
+      SameNodeError: if node_source and node_target are the same.
 
     This call does NOT consume API quota.
     """
-    node_source = self._get_node_id(node_source) 
+    if node_source == node_target:
+      raise SameNodeError(
+          "it is no possible to add links between the same node; id: {node_id}"
+          .format(node_id=node_source)
+      )
+
+    node_source = self._get_node_id(node_source)
     node_target = self._get_node_id(node_target)
     if node_source not in self.nodes:
-      raise NodeNotFound("Source '%s' not found in nodes" % node_source)
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_source
+          )
+      )
     if node_target not in self.nodes:
-      raise NodeNotFound("Target '%s' not found in nodes" % node_target)
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_target
+          )
+      )
     self.links[(node_source, node_target, connection_type)] = True
 
-  def add_links_if_match(self, node_source, node_target, max_api_quotas=100000, max_depth=5):
+  def add_links_if_match(self, node_source, node_target,
+                         max_api_quotas=100000, max_depth=5, max_ratio=1000):
     """Adds the needed links between node_source and node_target if node_target could be achieved by node_source.
 
     Args:
       node_source (str): source node ID.
-      node_targe (str): target node ID.
-      max_api_quotas (int, optional) maximum number of api quotas thath could
+      node_target (str): target node ID.
+      max_api_quotas (int, optional): maximum number of api quotas thath could
         be consumed. Defaults to 100000.
-      max_depth (int, optional): maximum number of hops between the nodes. 
+      max_depth (int, optional): maximum number of hops between the nodes.
         Defaults to 5. It must be less than 5.
+      max_ratio (int, optional): maximum number of multi-requests.
+        Defaults to 1000.
 
     Returns:
-      bool: whether relation has been found. 
+      bool: whether relation has been found.
 
-    This call consumes API quota (as much as max_api_quotas value), one for each expansion required to find the 
-    relation.
+    Raises:
+      NodeNotFound: if any node is not found.
+      SameNodeError: if node_source and node_target are the same.
+
+    This call consumes API quota (as much as max_api_quotas value), one for
+      each expansion required to find the relation.
     """
-    node_source = self._get_node_id(node_source) 
+    if node_source == node_target:
+      raise SameNodeError(
+          "it is no possible to add links between the same node; id: %s"
+          % node_source
+      )
+
+    node_source = self._get_node_id(node_source)
     node_target = self._get_node_id(node_target)
     if node_source not in self.nodes:
-      raise NodeNotFound("Source '%s' not found in nodes" % node_source)
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_source
+          )
+      )
     if node_target not in self.nodes:
-      raise NodeNotFound("Target '%s' not found in nodes" % node_target)
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_target
+          )
+      )
+    has_link = False
+    for source_, target_, _ in self.links:
+      if ((source_ == node_source and target_ == node_target) or
+          (source_ == node_target and target_ == node_source)):
+        has_link = True
 
-    node_source = self.nodes[node_source]
-    node_target = self.nodes[node_target]
-    max_depth = max_depth if max_depth <= 5 else 5
+    if not has_link:
 
-    with Manager() as manager:
-      found, links = self._recursive_search_parallel(node_source, node_target, max_api_quotas=max_api_quotas, max_depth=max_depth, nodes_explored=manager.list())
-  
-    if found:
-      for source_id, target_id, connection_type, target_type in links:
-        self.add_node(target_id, target_type)
-        self.links[(source_id, target_id, connection_type)] = True
-      return True
-    else:
-      return False
+      node_source = self.nodes[node_source]
+      node_target = self.nodes[node_target]
+
+      links = self._search_connection(
+          node_source,
+          node_target,
+          max_api_quotas,
+          max_depth,
+          max_ratio
+      )
+
+      if links:
+        for source_id, target_id, connection_type, target_type in links:
+          self.add_node(target_id, target_type)
+          self.links[(source_id, target_id, connection_type)] = True
+        has_link = True
+
+    return has_link
 
   def delete_node(self, node_id):
     """Deletes a node from the graph.
@@ -728,7 +1005,12 @@ class VTGraph(object):
     """
     node_id = self._get_node_id(node_id)
     if node_id not in self.nodes:
-      raise NodeNotFound("node '%s' not found in nodes" % node_id)
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_id
+          )
+      )
 
     del self.nodes[node_id]
     to_be_deleted = []
@@ -741,10 +1023,14 @@ class VTGraph(object):
 
   def get_ui_link(self):
     """Requires that save_graph was called."""
-    return "https://www.virustotal.com/graph/%s" % self.graph_id
+    return "https://www.virustotal.com/graph/{graph_id}".format(
+        graph_id=self.graph_id
+    )
 
   def get_iframe_code(self):
     """Requires that save_graph was called."""
     return """
-    <iframe src="https://www.virustotal.com/graph/embed/%s" width="800" height="600"></iframe>
-    """ % self.graph_id
+    <iframe src="https://www.virustotal.com/graph/embed/{graph_id}" width="800" height="600"></iframe>
+    """.format(
+        graph_id=self.graph_id
+    )
