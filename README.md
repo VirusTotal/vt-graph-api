@@ -27,3 +27,11 @@ https://developers.virustotal.com/v3.0/docs/api-documentation
 
 https://developers.virustotal.com/v3.0/docs/simple-tutorials  
 https://developers.virustotal.com/v3.0/docs/advanced-tutorials
+
+# Test it!
+
+Use tox to test:
+
+```
+>>> tox
+```
