@@ -492,7 +492,7 @@ class VTGraph(object):
         limit=limit
     )
     if cursor:
-      url = "{url}?cursor=%{cursor}".format(url=url, cursor=cursor)
+      url = "{url}?cursor={cursor}".format(url=url, cursor=cursor)
     headers = {"x-apikey": self.api_key, "x-tool": "graph-api-v1"}
 
     # if request fail, it will be retried at least three times
@@ -948,8 +948,10 @@ class VTGraph(object):
     """
     if node_source == node_target:
       raise SameNodeError(
-          "it is no possible to add links between the same node; id: %s"
-          % node_source
+          "it is no possible to add links between the same node; id: {node_id}"
+          .format(
+              node_id=node_source
+          )
       )
 
     node_source = self._get_node_id(node_source)
