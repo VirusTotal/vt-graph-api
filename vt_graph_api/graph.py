@@ -685,6 +685,7 @@ class VTGraph(object):
         i += 1
 
     expansion_pool.close()
+    expansion_pool.join()
     return expansion_nodes
 
   def _search_connection(self, node_source, target_nodes,
