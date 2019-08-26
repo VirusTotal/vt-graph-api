@@ -742,9 +742,9 @@ class VTGraph(object):
           max_depth
       )
 
+      pool = multiprocessing.pool.ThreadPool(processes=max_ratio)
+
       while max_api_quotas.value > 0 and target_nodes and queue:
-        max_nodes = min(len(queue), max_ratio)
-        pool = multiprocessing.pool.ThreadPool(processes=max_nodes)
         visited_nodes.extend([node[0] for node in queue])
         results = pool.map(expand_parallel_partial_, queue)
         queue = []
