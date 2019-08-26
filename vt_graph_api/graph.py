@@ -444,12 +444,12 @@ class VTGraph(object):
     It consumes API quota.
     """
     self._log("Getting real ID for: {node_id}".format(node_id=node_id))
-    if re.match(self._url_re, node_id):
+    if self._url_re.match(node_id):
       new_id = self._get_url_id(node_id)
       if new_id in six.iterkeys(self.nodes):
         return new_id
 
-    if re.match(self._sha1_re, node_id) or re.match(self._md5_re, node_id):
+    if self._sha1_re.match(node_id) or self._md5_re.match(node_id):
       new_id = self._get_file_sha_256(node_id)
       if new_id in six.iterkeys(self.nodes):
         return new_id
