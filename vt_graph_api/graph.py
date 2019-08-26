@@ -95,7 +95,7 @@ class VTGraph(object):
 
     self._url_re = re.compile(r"https?://", re.IGNORECASE)
     self._sha1_re = re.compile(r"^[0-9a-fA-F]{40}$")
-    self._md5_re = re.compile(r"'^[0-9a-fA-F]{32}$")
+    self._md5_re = re.compile(r"^[0-9a-fA-F]{32}$")
     self._index = 0
     self._logger = logging.getLogger("vt_graph")
     self._logger.addHandler(logging.StreamHandler())
@@ -443,7 +443,7 @@ class VTGraph(object):
 
     It consumes API quota.
     """
-
+    self._log("Getting real ID for: {node_id}".format(node_id=node_id))
     if re.match(self._url_re, node_id):
       new_id = self._get_url_id(node_id)
       if new_id in six.iterkeys(self.nodes):
