@@ -29,3 +29,8 @@ class SaveGraphError(Exception):
 class SameNodeError(Exception):
 
   pass
+
+
+class MaximumConnectionRetriesError(Exception):
+
+  pass

@@ -1,12 +1,22 @@
 
-"""Class Node."""
+"""vt_graph_api.node.
+
+this module provides the Python object wrapper for
+VTGraph node representation.
+"""
 
 
+import re
 from vt_graph_api.errors import NodeNotSupportedTypeError
 
 
+URL_RE = re.compile(r"https?://", re.IGNORECASE)
+SHA1_RE = re.compile(r"^[0-9a-fA-F]{40}$")
+MD5_RE = re.compile(r"^[0-9a-fA-F]{32}$")
+
+
 class Node(object):
-  """Python object wrapper por Node representation.
+  """Python object wraper for a the VT Graph Node representation.
 
   Attributes:
     node_id (str): node identifier.
@@ -81,6 +91,42 @@ class Node(object):
     self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
     self.attributes = None
     self.label = ""
+
+  @staticmethod
+  def is_url(node_id):
+    """Check if node_id belongs to url.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to url
+    """
+    return URL_RE.match(node_id)
+
+  @staticmethod
+  def is_md5(node_id):
+    """Check if node_id belongs to md5 hash.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to md5 hash.
+    """
+    return MD5_RE.match(node_id)
+
+  @staticmethod
+  def is_sha1(node_id):
+    """Check if node_id belongs to sha1 hash.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to sha1 hash.
+    """
+    return SHA1_RE.match(node_id)
 
   def add_attributes(self, attributes):
     """Adds the attributes if the node doesn't have it yet.

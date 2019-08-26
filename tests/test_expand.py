@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 """Test expansion nodes from graph."""
 
 
@@ -14,6 +15,99 @@ test_graph = vt_graph_api.VTGraph(
     user_editors=["jinfantes"],
     group_viewers=["virustotal"]
 )
+
+
+def test_get_expansion_nodes_one_level(mocker):
+  """Test get expansion nodes at once level"""
+  request_data = {
+      "data": [
+          {
+              "attributes": {},
+              "id":
+                  "7c11c7ccd384fd9f377da499fc0" +
+                  "59fa08fdc33a1bb870b5bc3812d24dd421a16",
+              "type": "file"
+          }
+      ]
+  }
+  mocker.spy(test_graph, "_get_expansion_nodes")
+  node_a = vt_graph_api.Node(
+      "26c808a1eb3eaa7bb29ec2ab834559f06f2636b87d5f542223426d6f238ff906",
+      "file"
+  )
+  node_b = vt_graph_api.Node(
+      "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16",
+      "file"
+  )
+  m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
+  mocker.patch("requests.get", return_value=m)
+  expansion_nodes, _ = test_graph._get_expansion_nodes(node_a, "similar_files", 20)
+  assert test_graph._get_expansion_nodes.call_count == 1
+  assert node_b in expansion_nodes
+  mocker.resetall()
+
+
+def test_get_expansion_nodes_n_level_with_cursor(mocker):
+  """Test get expansion nodes at n level without cursor"""
+  request_data = {
+      "data": [
+          {
+              "attributes": {},
+              "id":
+                  "7c11c7ccd384fd9f377da499fc0" +
+                  "59fa08fdc33a1bb870b5bc3812d24dd421a16",
+              "type": "file"
+          }
+      ],
+      "meta": {
+          "cursor": "dummy cursor"
+      }
+  }
+  mocker.spy(test_graph, "_get_expansion_nodes")
+  node_a = vt_graph_api.Node(
+      "26c808a1eb3eaa7bb29ec2ab834559f06f2636b87d5f542223426d6f238ff906",
+      "file"
+  )
+  node_b = vt_graph_api.Node(
+      "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16",
+      "file"
+  )
+  m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
+  mocker.patch("requests.get", return_value=m)
+  expansion_nodes, _ = test_graph._get_expansion_nodes(node_a, "similar_files", 40)
+  assert test_graph._get_expansion_nodes.call_count == 40
+  assert node_b in expansion_nodes
+  mocker.resetall()
+
+
+def test_get_expansion_nodes_n_level_without_cursor(mocker):
+  """Test get expansion nodes at n level without cursor"""
+  request_data = {
+      "data": [
+          {
+              "attributes": {},
+              "id":
+                  "7c11c7ccd384fd9f377da499fc0" +
+                  "59fa08fdc33a1bb870b5bc3812d24dd421a16",
+              "type": "file"
+          }
+      ]
+  }
+  mocker.spy(test_graph, "_get_expansion_nodes")
+  node_a = vt_graph_api.Node(
+      "26c808a1eb3eaa7bb29ec2ab834559f06f2636b87d5f542223426d6f238ff906",
+      "file"
+  )
+  node_b = vt_graph_api.Node(
+      "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16",
+      "file"
+  )
+  m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
+  mocker.patch("requests.get", return_value=m)
+  expansion_nodes, _ = test_graph._get_expansion_nodes(node_a, "similar_files", 1000)
+  assert test_graph._get_expansion_nodes.call_count == 1
+  assert node_b in expansion_nodes
+  mocker.resetall()
 
 
 def test_expansion_existing_node(mocker):

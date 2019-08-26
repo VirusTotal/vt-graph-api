@@ -1,4 +1,15 @@
-"""Class VTGraph."""
+"""vt_graph_api.graph.
+
+This modules provides the Python object wrapper for
+virustotal graph representation.
+
+Documentation:
+  https://developers.virustotal.com/v3.0/docs/api-documentation
+
+Examples:
+  https://developers.virustotal.com/v3.0/docs/simple-tutorials
+  https://developers.virustotal.com/v3.0/docs/advanced-tutorials
+"""
 
 
 import functools
@@ -6,20 +17,19 @@ import json
 import logging
 import multiprocessing
 import multiprocessing.pool
-import re
 import requests
 import six
 from vt_graph_api.errors import CollaboratorNotFoundError
+from vt_graph_api.errors import MaximumConnectionRetriesError
 from vt_graph_api.errors import NodeNotFoundError
 from vt_graph_api.errors import NodeNotSupportedExpansionError
 from vt_graph_api.errors import SameNodeError
 from vt_graph_api.errors import SaveGraphError
 from vt_graph_api.node import Node
-from vt_graph_api.version import __version__ as VERSION
 
 
 class VTGraph(object):
-  """Python object wrapper for VTGraph.
+  """Python object wrapper for Virustotal Graph representation.
 
   Attributes:
     api_key (str): VT API Key.
@@ -38,6 +48,8 @@ class VTGraph(object):
 
   MAX_API_EXPANSION_LIMIT = 40
   MAX_PARALLEL_REQUESTS = 1000
+  X_TOOL = "Graph"
+  REQUEST_TIMEOUT = 40
 
   def __init__(
       self,
@@ -68,14 +80,6 @@ class VTGraph(object):
       verbose (bool, optional): true for printing log messages.
         Defaults to False.
 
-    Examples:
-      >>> VTGraph(
-      ... API_KEY,
-      ... verbose=True,
-      ... private=True,
-      ... name="First Graph API test")
-      <vt_graph_api.graph.VTGraph object at 0x7fd57ba88630>
-
     This call does NOT consume API quota.
     """
     self.api_key = api_key
@@ -93,9 +97,6 @@ class VTGraph(object):
     self.nodes = {}
     self.links = {}
 
-    self._url_re = re.compile(r"https?://", re.IGNORECASE)
-    self._sha1_re = re.compile(r"^[0-9a-fA-F]{40}$")
-    self._md5_re = re.compile(r"^[0-9a-fA-F]{32}$")
     self._index = 0
     self._logger = logging.getLogger("vt_graph")
     self._logger.addHandler(logging.StreamHandler())
@@ -112,8 +113,23 @@ class VTGraph(object):
     if self.verbose:
       self._logger.info(msg)
 
+  def _get_node_detections(self, node):
+    """Get node detections from attributes.
+
+    Args:
+        node (Node): node from which detections are getted.
+
+    Returns:
+        dict: with the node detections in VT api format.
+    """
+    return (
+        node.attributes["last_analysis_stats"]["malicious"] +
+        node.attributes["last_analysis_stats"]["suspicious"]
+    )
+
   def _add_node_to_output(self, output, node_id):
-    """Add the node with the given node_id to the output in order to send information to VT API.
+    """Add the node with the given node_id to the output,
+    in order to send information to VT API.
 
     Args:
       output (dict): graph structure in json representation to be consumed
@@ -133,12 +149,8 @@ class VTGraph(object):
       node_data["text"] = node.label
 
     if node.attributes:
-      # File.
       if node.node_type == "file":
-        has_detections = (
-            node.attributes["last_analysis_stats"]["malicious"] +
-            node.attributes["last_analysis_stats"]["suspicious"]
-        )
+        has_detections = self._get_node_detections(node)
         entity_attributes = {
             "has_detections": has_detections,
         }
@@ -158,9 +170,7 @@ class VTGraph(object):
 
       # Urls.
       elif node.node_type == "url":
-        has_detections = (
-            node.attributes["last_analysis_stats"]["malicious"] +
-            node.attributes["last_analysis_stats"]["suspicious"])
+        has_detections = self._get_node_detections(node)
         entity_attributes = {
             "has_detections": has_detections,
         }
@@ -193,7 +203,7 @@ class VTGraph(object):
     url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/viewers".format(
         graph_id=self.graph_id
     )
-    headers = {"x-apikey": self.api_key, "x-tool": VERSION}
+    headers = self._get_headers()
     response = requests.post(
         url,
         headers=headers,
@@ -227,7 +237,7 @@ class VTGraph(object):
     url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/editors".format(
         graph_id=self.graph_id
     )
-    headers = {"x-apikey": self.api_key, "x-tool": VERSION}
+    headers = self._get_headers()
     response = requests.post(
         url,
         headers=headers,
@@ -238,11 +248,12 @@ class VTGraph(object):
       raise CollaboratorNotFoundError()
 
   def _fetch_information(self, node):
-    """Add information from VT to node.
+    """Fetch VT to get the node information.
 
     Args:
         node (Node): node to be searched in VT.
     """
+    data = {}
     headers = self._get_headers()
     end_point = self._get_api_endpoint(node.node_type)
     url = "https://www.virustotal.com/api/v3/{end_point}/{node_id}".format(
@@ -253,7 +264,6 @@ class VTGraph(object):
     if response.status_code == 200:
       data = response.json()
     else:
-      data = {}
       self._log(
           "Request to '{url}' with '{status_code}' status code"
           .format(
@@ -261,11 +271,11 @@ class VTGraph(object):
               status_code=response.status_code
           )
       )
-    if "attributes" in data.get("data", dict()):
+    if "data" in data and "attributes" in data.get("data"):
       node.add_attributes(data["data"]["attributes"])
 
   def _send_graph_to_vt(self, output):
-    """Send computed graph to VT in order to save it.
+    """Sends the computed graph to VT.
 
     Args:
       output (dict): graph in VT api readable format.
@@ -275,7 +285,7 @@ class VTGraph(object):
     """
     self._log("Saving local graph")
     url = "https://www.virustotal.com/api/v3/graphs"
-    headers = {"x-apikey": self.api_key, "x-tool": VERSION}
+    headers = self._get_headers()
     response = requests.post(url, headers=headers, data=json.dumps(output))
     if response.status_code == 200:
       data = response.json()
@@ -297,7 +307,6 @@ class VTGraph(object):
               status_code=response.status_code
           )
       )
-    self._log("Sending Graph to VT")
 
   def save_graph(self):
     """Saves the graph into VirusTotal Graph database.
@@ -318,7 +327,7 @@ class VTGraph(object):
             "attributes": {
                 "graph_data": {
                     "description": self.name,
-                    "version": VERSION,
+                    "version": self.X_TOOL,
                 },
                 "private": self.private,
                 "nodes": [],
@@ -367,10 +376,10 @@ class VTGraph(object):
           "target": target_id,
       })
 
-    for node_id in self.nodes:
-      if node_id not in added:
-        self._add_node_to_output(output, node_id)
-        added.add(node_id)
+    new_nodes = (node_id for node_id in self.nodes if node_id not in added)
+    for node_id in new_nodes:
+      self._add_node_to_output(output, node_id)
+      added.add(node_id)
 
     self._send_graph_to_vt(output)
     self._add_editors()
@@ -384,10 +393,10 @@ class VTGraph(object):
     ))
 
   def _get_file_sha_256(self, node_id):
-    """Return sha256 hash for node_id with file type if matches found in VT, else return simple node_id.
+    """Return the sha256 hash for node_id with file type if matches found in VT, else return simple node_id.
 
     Args:
-      node_id (str): identifier of the node. See the top level documentation.
+      node_id (str): identifier of the node. See the top level documentation
         to understand IDs.
 
     Returns:
@@ -408,14 +417,14 @@ class VTGraph(object):
     return node_id
 
   def _get_url_id(self, node_id):
-    """Return correct identifier in case of url instead of sha256.
+    """Return the correct identifier in case of url instead of sha256.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
         to understand IDs.
 
     Returns:
-      str: url identifier for VT api.
+      str: url identifier for the VT api.
 
     It consumes API quota.
     """
@@ -432,7 +441,7 @@ class VTGraph(object):
     return node_id
 
   def _get_node_id(self, node_id):
-    """Return correct node_id in case of file node with no sha256 hash or url instead of sha256.
+    """Return the correct node_id in case of the file node with no sha256 hash or url instead of sha256.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
@@ -440,16 +449,14 @@ class VTGraph(object):
 
     Returns:
       str: the correct node_id for the given identifier.
-
-    It consumes API quota.
     """
     self._log("Getting real ID for: {node_id}".format(node_id=node_id))
-    if self._url_re.match(node_id):
+    if Node.is_url(node_id):
       new_id = self._get_url_id(node_id)
       if new_id in six.iterkeys(self.nodes):
         return new_id
 
-    if self._sha1_re.match(node_id) or self._md5_re.match(node_id):
+    if Node.is_sha1(node_id) or Node.is_md5(node_id):
       new_id = self._get_file_sha_256(node_id)
       if new_id in six.iterkeys(self.nodes):
         return new_id
@@ -457,8 +464,9 @@ class VTGraph(object):
     return node_id
 
   def _get_expansion_nodes(self, node, expansion,
-                           max_nodes_per_relationship, cursor=None,
-                           max_retries=3):
+                           max_nodes_per_relationship=1000, cursor=None,
+                           max_retries=3, expansion_nodes=None,
+                           consumed_quotas=0):
     """Returns the nodes to be attached to given node with the given expansion.
 
     Args:
@@ -467,35 +475,47 @@ class VTGraph(object):
         nodes of type file.
       max_nodes_per_relationship (int): max number of nodes that will
         be expanded per relationship. Minimum value will be 10.
-        Defaults to 1000000.
+        Defaults to 1000.
       cursor (str, optional): VT relationships cursor. Defaults to None.
       max_retries (int, optional): maximum retries for API request.
+      expansion_nodes ([Node], optional): list with the result's nodes for
+        tail recursion. Defaults to None.
+      consumed_quotas (int, optional): number of consumed quotas for tail
+        recursion. Defaults to 0.
+
+    Raises:
+      MaximumConnectionRetriesError: if the maximum number of retries will be
+        achieved by the function.
 
     Returns:
       (list(Node), int): a list with the nodes produced by the given node
         expansion in the given expansion type, and number with api
         quotas consumed.
+
+    It consumes API quota. One for each expansion node expansion.
     """
-    expansion_nodes = []
+    expansion_nodes = expansion_nodes or []
     parent_node_id = node.node_id
     parent_node_type = node.node_type
     end_point = self._get_api_endpoint(parent_node_type)
-    consumed_quotas = 1
     request_try = 0
     has_response = False
     limit = min(max_nodes_per_relationship, self.MAX_API_EXPANSION_LIMIT)
 
-    url = "https://www.virustotal.com/api/v3/{end_point}/{node_id}/{expansion}?limit={limit}".format(
-        end_point=end_point,
-        node_id=node.node_id,
-        expansion=expansion,
-        limit=limit
+    url = (
+        "https://www.virustotal.com/api/v3/{end_point}/{node_id}/{expansion}?limit={limit}"
+        .format(
+            end_point=end_point,
+            node_id=node.node_id,
+            expansion=expansion,
+            limit=limit
+        )
     )
     if cursor:
       url = "{url}?cursor={cursor}".format(url=url, cursor=cursor)
     headers = {"x-apikey": self.api_key, "x-tool": "graph-api-v1"}
 
-    # if request fail, it will be retried at least three times
+    # If the request fails, it will be retried at least three times.
     while request_try < max_retries and not has_response:
       try:
         self._log(
@@ -505,8 +525,13 @@ class VTGraph(object):
                 expansion=expansion
             )
         )
-        response = requests.get(url, headers=headers, timeout=40)
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=self.REQUEST_TIMEOUT
+        )
         self._increment_api_counter()
+        consumed_quotas += 1
         has_response = True
         if response.status_code == 200:
           data = response.json()
@@ -520,6 +545,8 @@ class VTGraph(object):
           )
       except requests.ConnectionError:
         request_try += 1
+        if request_try >= max_retries:
+          raise MaximumConnectionRetriesError()
 
     # Add cursor data.
     has_more = data.get("meta", {})
@@ -552,13 +579,12 @@ class VTGraph(object):
       cursor = data["meta"]["cursor"]
       next_max = max_nodes_per_relationship - len(data["data"])
       if next_max > 0:
-        expansion_nodes_, consumed_quotas_ = self._get_expansion_nodes(
+        return self._get_expansion_nodes(
             node,
             expansion, max_nodes_per_relationship=next_max,
-            cursor=cursor
+            cursor=cursor, expansion_nodes=expansion_nodes,
+            consumed_quotas=consumed_quotas
         )
-        expansion_nodes += expansion_nodes_
-        consumed_quotas += consumed_quotas_
 
     return expansion_nodes, consumed_quotas
 
@@ -581,6 +607,11 @@ class VTGraph(object):
 
     Returns:
       list(tuple(Node, list, int)): list with the result of the expansions.
+      The elements of the returned list of tuples are:
+        first element: one of the nodes of the expansion.
+        second element: a list with the path to that Node.
+        third element: node's depth relative to first node
+          which started the search.
     """
 
     node = item[0]
@@ -729,7 +760,7 @@ class VTGraph(object):
 
   def _get_headers(self):
     """Returns the request headers."""
-    return {"x-apikey": self.api_key, "x-tool": VERSION}
+    return {"x-apikey": self.api_key, "x-tool": self.X_TOOL}
 
   def _get_api_endpoint(self, node_type):
     """Returns the api end point."""
@@ -957,7 +988,7 @@ class VTGraph(object):
       SameNodeError: if node_source and node_target are the same.
 
     This call consumes API quota (as much as max_api_quotas value), one for
-      each expansion required to find the relation.
+    each expansion required to find the relation.
     """
     if node_source == node_target:
       raise SameNodeError(
@@ -1029,6 +1060,9 @@ class VTGraph(object):
 
     Returns:
       bool: whether at least one relation has been found.
+
+    This call consumes API quota (as much as max_api_quotas value), one for
+    each expansion required to find the relations.
     """
 
     node_source = self._get_node_id(node_source)
