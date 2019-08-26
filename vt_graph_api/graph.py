@@ -562,13 +562,13 @@ class VTGraph(object):
 
     return expansion_nodes, consumed_quotas
 
-  def _parallel_expansion(self, node_target, solution_path, visited_nodes,
+  def _parallel_expansion(self, target_nodes, solution_paths, visited_nodes,
                           max_api_quotas, lock, max_depth, item):
     """Parallelize node expansion synchronizing api quotas consumed.
 
     Args:
-      node_target (Node): target node.
-      solution_path (multiprocessing.managers.ListProxy): synchronized
+      target_nodes ([Node]): target node.
+      solution_paths (multiprocessing.managers.ListProxy): synchronized
         list with the path.
       visited_nodes (multiprocessing.managers.ListProxy): synchronized
         list with the nodes.
@@ -614,13 +614,32 @@ class VTGraph(object):
           has_quota = False
 
       i = 0
-      while i < len(expansion_threads) and not solution_path:
+      while i < len(expansion_threads) and target_nodes:
         nodes__, _ = expansion_threads[i].get()
         expansion_type = expansions[i]
-        if node_target not in nodes__:
-          not_visited_nodes = (node for node in nodes__
-                               if node not in visited_nodes)
-          for node_ in not_visited_nodes:
+
+        not_visited_nodes = (node for node in nodes__
+                             if node not in visited_nodes)
+        for node_ in not_visited_nodes:
+          if node_ in target_nodes:
+            path.append(
+                (
+                    node.node_id,
+                    node_.node_id,
+                    expansions[i],
+                    node_.node_type
+                )
+            )
+            try:
+              solution_paths.append(path)
+            except ValueError:
+              self.log(
+                  "Error appending element to multiprocessing " +
+                  "proxy list"
+              )
+            target_nodes.remove(node_)
+
+          else:
             expansion_nodes.append(
                 (
                     node_,
@@ -630,24 +649,14 @@ class VTGraph(object):
                              node_.node_type)],
                     depth + 1)
                 )
-        else:
-          path.append(
-              (
-                  node.node_id,
-                  node_target.node_id,
-                  expansions[i],
-                  node_target.node_type
-              )
-          )
-          solution_path.extend(path)
         i += 1
 
     expansion_pool.close()
     return expansion_nodes
 
-  def _search_connection(self, node_source, node_target,
+  def _search_connection(self, node_source, target_nodes,
                          max_api_quotas, max_depth, max_ratio):
-    """Search connection between node source and node_target.
+    """Search connection between node source and all of target_nodes.
 
                           node_source
                              +-+
@@ -659,9 +668,9 @@ class VTGraph(object):
     thread 1<-+-+         X   X   X          +-+ ----> thread n
               |-|                            |-|
           +---------+                   +-----------+
-          |         X                   X           X
+          |         X                   X           |
      +---+-+       +-+                 +-+         +-+
-     |   +-+       +-+                 +-+         +-+
+     |   +-+       +-+                 +-+         +-+ <--- node_target
     +-+
     +-+ <--- node_target
 
@@ -669,37 +678,38 @@ class VTGraph(object):
 
     Args:
       node_source (Node): start node.
-      node_target (Node): last node.
+      target_nodes ([Node]): last node.
       max_api_quotas (int, optional): max number of api quotas.
         Defaults to 10000.
       max_depth (int, optional): max hops between nodes. Defaults to 5.
       max_ratio (int): max number of nodes that could be processed
         in parallel. Max: MAX_PARALLEL_REQUESTS.
     Returns:
-      list((str, str, str, str)): the computed path from node_source to
-        node_target
+      [[(str, str, str, str))]]: the computed path from node_source to
+        each node in target_nodes.
     """
 
     max_ratio = min(max_ratio, self.MAX_PARALLEL_REQUESTS)
     queue = [(node_source, [], 0)]
     max_api_quotas = multiprocessing.Value("i", max_api_quotas)
     lock = multiprocessing.Lock()
-    path = []
+    paths = []
 
     with multiprocessing.Manager() as manager:
-      solution_path = manager.list()
+      solution_paths = manager.list()
       visited_nodes = manager.list([node_source])
+      target_nodes = manager.list(target_nodes)
       expand_parallel_partial_ = functools.partial(
           self._parallel_expansion,
-          node_target,
-          solution_path,
+          target_nodes,
+          solution_paths,
           visited_nodes,
           max_api_quotas,
           lock,
           max_depth
       )
 
-      while max_api_quotas.value > 0 and not path and queue:
+      while max_api_quotas.value > 0 and target_nodes and queue:
         max_nodes = min(len(queue), max_ratio)
         pool = multiprocessing.pool.ThreadPool(processes=max_nodes)
         visited_nodes.extend([node[0] for node in queue])
@@ -708,11 +718,12 @@ class VTGraph(object):
         for list_ in results:
           for item in list_:
             queue.append(item)
-        path = list(solution_path)
-        pool.close()
-        pool.join()
 
-    return path
+      paths = list(solution_paths)
+      pool.close()
+      pool.join()
+
+    return paths
 
   def _get_headers(self):
     """Returns the request headers."""
@@ -983,16 +994,75 @@ class VTGraph(object):
 
       links = self._search_connection(
           node_source,
-          node_target,
+          [node_target],
           max_api_quotas,
           max_depth,
           max_ratio
       )
 
       if links:
-        for source_id, target_id, connection_type, target_type in links:
-          self.add_node(target_id, target_type)
-          self.links[(source_id, target_id, connection_type)] = True
+        for links_ in links:
+          for source_id, target_id, connection_type, target_type in links_:
+            self.add_node(target_id, target_type)
+            self.links[(source_id, target_id, connection_type)] = True
+        has_link = True
+
+    return has_link
+
+  def connect_with_graph(self, node_source, max_api_quotas=100000,
+                         max_depth=5, max_ratio=1000):
+    """Try to connect node_source with graph's nodes.
+
+    Args:
+        node_source (Node): source_node ID.
+        max_api_quotas (int, optional): maximum number of api quotas thath could
+        be consumed. Defaults to 100000.
+      max_depth (int, optional): maximum number of hops between the nodes.
+        Defaults to 5. It must be less than 5.
+      max_ratio (int, optional): maximum number of multi-requests.
+        Defaults to 1000.
+
+    Raises:
+      NodeNotFound: if any node is not found.
+
+    Returns:
+      bool: whether at least one relation has been found.
+    """
+
+    node_source = self._get_node_id(node_source)
+    if node_source not in self.nodes:
+      raise NodeNotFoundError(
+          "node '{node_id}' not found in nodes"
+          .format(
+              node_id=node_source
+          )
+      )
+
+    has_link = False
+    for source_, target_, _ in self.links:
+      if source_ == node_source  or source_ == target_:
+        has_link = True
+
+    if not has_link:
+
+      node_source = self.nodes[node_source]
+      target_nodes = list(self.nodes.values())
+      print([node.node_id for node in target_nodes])
+      target_nodes.remove(node_source)
+
+      links = self._search_connection(
+          node_source,
+          target_nodes,
+          max_api_quotas,
+          max_depth,
+          max_ratio
+      )
+
+      if links:
+        for links_ in links:
+          for source_id, target_id, connection_type, target_type in links_:
+            self.add_node(target_id, target_type)
+            self.links[(source_id, target_id, connection_type)] = True
         has_link = True
 
     return has_link

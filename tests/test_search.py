@@ -1,5 +1,5 @@
 # pylint: disable=protected-access
-"""Test private VTGraph methods."""
+"""Test search VTGraph methods."""
 
 
 import vt_graph_api
@@ -40,7 +40,7 @@ def test_search_connection_first_level(mocker):
   )
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
-  assert test_graph._search_connection(node_a, node_b, 1000, 5, 100)
+  assert test_graph._search_connection(node_a, [node_b], 1000, 5, 100)
   assert test_graph._get_expansion_nodes.call_count == len(
       node_a.expansions_available
   )
@@ -92,7 +92,7 @@ def test_search_connection_second_level(mocker):
       node_a.expansions_available
   )
   total_nodes_first_level = total_file_expansions
-  assert test_graph._search_connection(node_a, node_b, 1000, 5, 100)
+  assert test_graph._search_connection(node_a, [node_b], 1000, 5, 100)
   assert test_graph._get_expansion_nodes.call_count <= (
       total_file_expansions +
       total_file_expansions * total_nodes_first_level
@@ -166,7 +166,7 @@ def test_search_connection_third_level(mocker):
       vt_graph_api.Node.NODE_EXPANSIONS.get("domain")
   )
   total_nodes_second_level = total_nodes_first_level * total_file_expansions
-  assert test_graph._search_connection(node_a, node_b, 3000, 5, 1000)
+  assert test_graph._search_connection(node_a, [node_b], 3000, 5, 1000)
   assert test_graph._get_expansion_nodes.call_count <= (
       total_file_expansions +
       total_file_expansions * total_nodes_first_level +
@@ -234,6 +234,6 @@ def test_search_connection_not_found_and_consumes_max_api_quotas(mocker):
   mocker.patch("requests.get", return_value=m)
   mocker.spy(test_graph, "_get_expansion_nodes")
   mocker.spy(test_graph, "_parallel_expansion")
-  assert not test_graph._search_connection(node_a, node_b, 100, 5, 1000)
+  assert not test_graph._search_connection(node_a, [node_b], 100, 5, 1000)
   assert test_graph._get_expansion_nodes.call_count <= 100
   mocker.resetall()
