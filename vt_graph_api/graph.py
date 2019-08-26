@@ -630,14 +630,16 @@ class VTGraph(object):
                     node_.node_type
                 )
             )
+
+            solution_paths.append(path)
+
             try:
-              solution_paths.append(path)
+              target_nodes.remove(node_)
             except ValueError:
-              self.log(
+              self._log(
                   "Error appending element to multiprocessing " +
                   "proxy list"
               )
-            target_nodes.remove(node_)
 
           else:
             expansion_nodes.append(
