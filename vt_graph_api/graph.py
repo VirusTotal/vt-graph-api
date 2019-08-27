@@ -751,7 +751,7 @@ class VTGraph(object):
         for list_ in results:
           for item in list_:
             queue.append(item)
-      self._log('finishing threads...')
+        self._log(len(queue))
       paths = list(solution_paths)
 
     return paths
