@@ -16,6 +16,7 @@ import functools
 import json
 import logging
 import multiprocessing
+import threading
 
 import concurrent.futures
 import requests
@@ -629,11 +630,10 @@ class VTGraph(object):
     if depth + 1 < max_depth:
       for expansion in expansions:
         # syncrhonize api quotas consumed
-        lock.acquire()
-        max_api_quotas.value -= 1
-        if max_api_quotas.value > -1:
-          has_quota = True
-        lock.release()
+        with lock:
+          max_api_quotas.value -= 1
+          if max_api_quotas.value > -1:
+            has_quota = True
 
         if has_quota:
           expansion_threads.append(
@@ -656,36 +656,31 @@ class VTGraph(object):
         not_visited_nodes = (node for node in nodes__
                               if node not in visited_nodes)
         for node_ in not_visited_nodes:
-          lock.acquire()
-          if node_ in target_nodes:
-            path.append(
-                (
-                    node.node_id,
-                    node_.node_id,
-                    expansions[i],
-                    node_.node_type
-                )
-            )
-            solution_paths.append(path)
-            target_nodes.remove(node_)
-          else:
-            expansion_nodes.append(
-                (
-                    node_,
-                    path + [(node.node_id,
-                             node_.node_id,
-                             expansion_type,
-                             node_.node_type)],
-                    depth + 1)
-                )
-          lock.release()
+          with lock:
+            if node_ in target_nodes:
+              path.append(
+                  (
+                      node.node_id,
+                      node_.node_id,
+                      expansions[i],
+                      node_.node_type
+                  )
+              )
+              solution_paths.append(path)
+              target_nodes.remove(node_)
+            else:
+              expansion_nodes.append(
+                  (
+                      node_,
+                      path + [(node.node_id,
+                              node_.node_id,
+                              expansion_type,
+                              node_.node_type)],
+                      depth + 1)
+                  )
         i += 1
       self._log("terminate")
-    with expansion_pool._shutdown_lock:
-      expansion_pool._shutdown = True
-      self._log("a")
-      expansion_pool._work_queue.put(None)
-      self._log("b")
+    expansion_pool.shutdown(wait=True)
     self._log("at exit")
     return expansion_nodes
 
@@ -730,7 +725,7 @@ class VTGraph(object):
 
     # shared variables
     max_api_quotas = multiprocessing.Value("i", max_api_quotas)
-    lock = multiprocessing.Lock()
+    lock = threading.Lock()
     solution_paths = []
     visited_nodes = list([node_source])
     target_nodes = list(target_nodes)
