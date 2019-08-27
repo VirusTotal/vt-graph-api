@@ -584,8 +584,7 @@ class VTGraph(object):
             cursor=cursor, expansion_nodes=expansion_nodes,
             consumed_quotas=consumed_quotas
         )
-    
-    self._log("finish %s on %s" % (node.node_id, expansion))
+
     return expansion_nodes, consumed_quotas
 
   def _parallel_expansion(self, target_nodes, solution_paths, visited_nodes,
@@ -648,11 +647,11 @@ class VTGraph(object):
                 )
             )
             has_quota = False
+            self._log('applying expansion')
 
-
-        self._log(len(expansion_nodes))
         i = 0
         while i < len(expansion_threads) and target_nodes:
+          self._log('waiting results...')
           nodes__, _ = expansion_threads[i].result()
           expansion_type = expansions[i]
 
