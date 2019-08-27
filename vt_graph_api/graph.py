@@ -618,70 +618,69 @@ class VTGraph(object):
     path = item[1]
     depth = item[2]
 
-    expansion_threads = []
+    futures = []
     expansion_nodes = []
     expansions = node.expansions_available
 
-    expansion_pool = concurrent.futures.ThreadPoolExecutor(
+    with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions)
-    )
-    has_quota = False
+    ) as pool:
 
-    if depth + 1 < max_depth:
-      for expansion in expansions:
-        # syncrhonize api quotas consumed
-        with lock:
-          max_api_quotas.value -= 1
-          if max_api_quotas.value > -1:
-            has_quota = True
+      has_quota = False
 
-        if has_quota:
-          expansion_threads.append(
-              expansion_pool.submit(
-                  self._get_expansion_nodes,
-                  node,
-                  expansion,
-                  40
-              )
-          )
-          has_quota = False
-        else:
-          break
-
-      i = 0
-      while i < len(expansion_threads) and target_nodes:
-        nodes__, _ = expansion_threads[i].result()
-        expansion_type = expansions[i]
-
-        not_visited_nodes = (node for node in nodes__
-                              if node not in visited_nodes)
-        for node_ in not_visited_nodes:
+      if depth + 1 < max_depth:
+        for expansion in expansions:
+          # syncrhonize api quotas consumed
           with lock:
-            if node_ in target_nodes:
-              path.append(
-                  (
-                      node.node_id,
-                      node_.node_id,
-                      expansions[i],
-                      node_.node_type
-                  )
-              )
-              solution_paths.append(path)
-              target_nodes.remove(node_)
-            else:
-              expansion_nodes.append(
-                  (
-                      node_,
-                      path + [(node.node_id,
-                              node_.node_id,
-                              expansion_type,
-                              node_.node_type)],
-                      depth + 1)
-                  )
-        i += 1
-      self._log("terminate")
-    expansion_pool.shutdown(wait=True)
-    self._log("at exit")
+            max_api_quotas.value -= 1
+            if max_api_quotas.value > -1:
+              has_quota = True
+
+          if has_quota:
+            futures.append(
+                (
+                    pool.submit(
+                        self._get_expansion_nodes,
+                        node,
+                        expansion,
+                        40
+                    ),
+                    expansion
+                )
+            )
+            has_quota = False
+          else:
+            break
+
+        for future, expansion in futures:
+
+          nodes__, _ = future.result()
+          not_visited_nodes = (node for node in nodes__
+                               if node not in visited_nodes)
+
+          for node_ in not_visited_nodes:
+            with lock:
+              if node_ in target_nodes:
+                path.append(
+                    (
+                        node.node_id,
+                        node_.node_id,
+                        expansion,
+                        node_.node_type
+                    )
+                )
+                solution_paths.append(path)
+                target_nodes.remove(node_)
+              else:
+                expansion_nodes.append(
+                    (
+                        node_,
+                        path + [(node.node_id,
+                                 node_.node_id,
+                                 expansion,
+                                 node_.node_type)],
+                        depth + 1)
+                    )
     return expansion_nodes
 
   def _search_connection(self, node_source, target_nodes,
@@ -744,19 +743,14 @@ class VTGraph(object):
 
       while max_api_quotas.value > 0 and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
-        threads = []
+        futures = []
         for node_ in queue:
-          # threads.append(pool.submit(expand_parallel_partial_, node_))
-          self._log('thread added')
-        # results = pool.map(expand_parallel_partial_, queue)
+          futures.append(pool.submit(expand_parallel_partial_, node_))
         queue = []
-        for thread in threads:
-          self._log('wait thread')
-          queue.extend(thread.result())
-          self._log('thread waited')
-          self._log(queue)
-      paths = list(solution_paths)
+        for future in futures:
+          queue.extend(future.result())
 
+    paths = list(solution_paths)
     return paths
 
   def _get_headers(self):
