@@ -731,31 +731,30 @@ class VTGraph(object):
     lock = multiprocessing.Lock()
     paths = []
 
-    with multiprocessing.Manager() as manager:
-      solution_paths = manager.list()
-      visited_nodes = manager.list([node_source])
-      target_nodes = manager.list(target_nodes)
-      expand_parallel_partial_ = functools.partial(
-          self._parallel_expansion,
-          target_nodes,
-          solution_paths,
-          visited_nodes,
-          max_api_quotas,
-          lock,
-          max_depth
-      )
+    solution_paths = []
+    visited_nodes = list([node_source])
+    target_nodes = list(target_nodes)
+    expand_parallel_partial_ = functools.partial(
+        self._parallel_expansion,
+        target_nodes,
+        solution_paths,
+        visited_nodes,
+        max_api_quotas,
+        lock,
+        max_depth
+    )
 
-      with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
 
-        while max_api_quotas.value > 0 and target_nodes and queue:
-          visited_nodes.extend([node[0] for node in queue])
-          results = pool.map(expand_parallel_partial_, queue)
-          queue = []
-          for list_ in results:
-            for item in list_:
-              queue.append(item)
+      while max_api_quotas.value > 0 and target_nodes and queue:
+        visited_nodes.extend([node[0] for node in queue])
+        results = pool.map(expand_parallel_partial_, queue)
+        queue = []
+        for list_ in results:
+          for item in list_:
+            queue.append(item)
 
-        paths = list(solution_paths)
+      paths = list(solution_paths)
 
     return paths
 
