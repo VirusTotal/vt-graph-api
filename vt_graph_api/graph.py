@@ -680,8 +680,7 @@ class VTGraph(object):
                   )
         i += 1
       self._log("terminate")
-    expansion_pool._shutdown = True
-    expansion_pool._work_queue.put(None)
+    expansion_pool.shutdown(wait=True)
     self._log("at exit")
     return expansion_nodes
 
@@ -747,7 +746,7 @@ class VTGraph(object):
         visited_nodes.extend([node[0] for node in queue])
         threads = []
         for node_ in queue:
-          threads.append(pool.submit(expand_parallel_partial_, node_))
+          # threads.append(pool.submit(expand_parallel_partial_, node_))
           self._log('thread added')
         # results = pool.map(expand_parallel_partial_, queue)
         queue = []
