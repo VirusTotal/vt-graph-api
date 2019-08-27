@@ -621,67 +621,68 @@ class VTGraph(object):
     expansion_nodes = []
     expansions = node.expansions_available
 
-    expansion_pool = concurrent.futures.ThreadPoolExecutor(
+    with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions)
-    )
-    has_quota = False
+    ) as expansion_pool:
+      has_quota = False
 
-    if depth + 1 < max_depth:
-      for expansion in expansions:
-        # syncrhonize api quotas consumed
-        lock.acquire()
-        max_api_quotas.value -= 1
-        if max_api_quotas.value > -1:
-          has_quota = True
-        lock.release()
-
-        if has_quota:
-          expansion_threads.append(
-              expansion_pool.submit(
-                  self._get_expansion_nodes,
-                  node,
-                  expansion,
-                  40
-              )
-          )
-          has_quota = False
-        else:
-          break
-
-      i = 0
-      while i < len(expansion_threads) and target_nodes:
-        nodes__, _ = expansion_threads[i].result()
-        expansion_type = expansions[i]
-
-        not_visited_nodes = (node for node in nodes__
-                              if node not in visited_nodes)
-        for node_ in not_visited_nodes:
+      if depth + 1 < max_depth:
+        for expansion in expansions:
+          # syncrhonize api quotas consumed
           lock.acquire()
-          if node_ in target_nodes:
-            path.append(
-                (
-                    node.node_id,
-                    node_.node_id,
-                    expansions[i],
-                    node_.node_type
+          max_api_quotas.value -= 1
+          if max_api_quotas.value > -1:
+            has_quota = True
+          lock.release()
+
+          if has_quota:
+            expansion_threads.append(
+                expansion_pool.submit(
+                    self._get_expansion_nodes,
+                    node,
+                    expansion,
+                    40
                 )
             )
-            solution_paths.append(path)
-            target_nodes.remove(node_)
+            has_quota = False
           else:
-            expansion_nodes.append(
-                (
-                    node_,
-                    path + [(node.node_id,
-                              node_.node_id,
-                              expansion_type,
-                              node_.node_type)],
-                    depth + 1)
-                )
-          lock.release()
-        i += 1
-    expansion_pool.shutdown(wait=True)
-    self._log('at exit')
+            break
+
+        i = 0
+        while i < len(expansion_threads):
+          self._log("%s || %s" % (i, len(expansion_threads)))
+          nodes__, _ = expansion_threads[i].result()
+          expansion_type = expansions[i]
+
+          not_visited_nodes = (node for node in nodes__
+                               if node not in visited_nodes)
+          for node_ in not_visited_nodes:
+            lock.acquire()
+            if node_ in target_nodes:
+              path.append(
+                  (
+                      node.node_id,
+                      node_.node_id,
+                      expansions[i],
+                      node_.node_type
+                  )
+              )
+              solution_paths.append(path)
+              target_nodes.remove(node_)
+            else:
+              expansion_nodes.append(
+                  (
+                      node_,
+                      path + [(node.node_id,
+                               node_.node_id,
+                               expansion_type,
+                               node_.node_type)],
+                      depth + 1)
+                  )
+            lock.release()
+          i += 1
+        self._log("terminate")
+    self._log("at exit")
 
     return expansion_nodes
 
