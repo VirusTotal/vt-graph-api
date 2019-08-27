@@ -624,6 +624,11 @@ class VTGraph(object):
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions)
     ) as expansion_pool:
+      self._log('safe')
+
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(expansions)
+    ) as expansion_pool:
       has_quota = False
 
       if depth + 1 < max_depth:
@@ -649,8 +654,7 @@ class VTGraph(object):
             break
 
         i = 0
-        while i < len(expansion_threads):
-          self._log("%s || %s" % (i, len(expansion_threads)))
+        while i < len(expansion_threads) and target_nodes:
           nodes__, _ = expansion_threads[i].result()
           expansion_type = expansions[i]
 
