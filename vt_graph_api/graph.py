@@ -743,6 +743,7 @@ class VTGraph(object):
         threads = []
         for node_ in queue:
           threads.append(pool.submit(expand_parallel_partial_, node_))
+          self._log('thread added')
         # results = pool.map(expand_parallel_partial_, queue)
         queue = []
         for thread in threads:
