@@ -644,17 +644,13 @@ class VTGraph(object):
                     40
                 )
             )
-            self._log('added to expansion threads')
             has_quota = False
           else:
             break
 
         i = 0
-        stop = False
-        while i < len(expansion_threads) and not stop:
-          self._log('waiting %s' % i)
+        while i < len(expansion_threads) and target_nodes:
           nodes__, _ = expansion_threads[i].result()
-          self._log('resulted in %s: %s' % (i, nodes__))
           expansion_type = expansions[i]
 
           not_visited_nodes = (node for node in nodes__
@@ -662,7 +658,6 @@ class VTGraph(object):
           for node_ in not_visited_nodes:
             lock.acquire()
             if node_ in target_nodes:
-              self._log('match %s' % i)
               path.append(
                   (
                       node.node_id,
@@ -673,8 +668,6 @@ class VTGraph(object):
               )
               solution_paths.append(path)
               target_nodes.remove(node_)
-              if not target_nodes:
-                stop = True
             else:
               expansion_nodes.append(
                   (
@@ -686,9 +679,9 @@ class VTGraph(object):
                       depth + 1)
                   )
             lock.release()
-          self._log('finish %s' % i)
           i += 1
         self._log('terminate')
+    self._log('at exit')
 
     return expansion_nodes
 
