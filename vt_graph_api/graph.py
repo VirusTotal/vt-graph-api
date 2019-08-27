@@ -584,7 +584,7 @@ class VTGraph(object):
             cursor=cursor, expansion_nodes=expansion_nodes,
             consumed_quotas=consumed_quotas
         )
-
+    self._log('finish expansion')
     return expansion_nodes, consumed_quotas
 
   def _parallel_expansion(self, target_nodes, solution_paths, visited_nodes,
@@ -675,7 +675,6 @@ class VTGraph(object):
                     "Error appending element to multiprocessing " +
                     "proxy list"
                 )
-
             else:
               expansion_nodes.append(
                   (
@@ -686,6 +685,7 @@ class VTGraph(object):
                                node_.node_type)],
                       depth + 1)
                   )
+          self._log('finishing expansions')
           i += 1
 
     return expansion_nodes
@@ -1085,7 +1085,6 @@ class VTGraph(object):
 
       node_source = self.nodes[node_source]
       target_nodes = list(self.nodes.values())
-      print([node.node_id for node in target_nodes])
       target_nodes.remove(node_source)
 
       links = self._search_connection(
