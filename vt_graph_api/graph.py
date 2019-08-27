@@ -588,7 +588,7 @@ class VTGraph(object):
     return expansion_nodes, consumed_quotas
 
   def _parallel_expansion(self, target_nodes, solution_paths, visited_nodes,
-                          max_api_quotas, lock, max_depth, item):
+                          max_api_quotas, max_depth, item):
     """Parallelize node expansion synchronizing api quotas consumed.
 
     Args:
@@ -623,21 +623,11 @@ class VTGraph(object):
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions)
     ) as expansion_pool:
-      has_quota = False
 
       if depth + 1 < max_depth:
         for expansion in expansions:
-          # syncrhonize api quotas consumed
-          lock.acquire()
-          max_api_quotas.value -= 1
-          if max_api_quotas.value > -1:
-            has_quota = True
-          else:
-            i = len(expansions)
-          lock.release()
-          # release api quotas
-
-          if has_quota:
+          if max_api_quotas > 0:
+            max_api_quotas -= 1
             expansion_threads.append(
                 expansion_pool.submit(
                     self._get_expansion_nodes,
@@ -646,12 +636,9 @@ class VTGraph(object):
                     40
                 )
             )
-            has_quota = False
-            self._log('applying expansion')
 
         i = 0
         while i < len(expansion_threads) and target_nodes:
-          self._log('waiting results...')
           nodes__, _ = expansion_threads[i].result()
           expansion_type = expansions[i]
 
@@ -728,8 +715,6 @@ class VTGraph(object):
 
     max_ratio = min(max_ratio, self.MAX_PARALLEL_REQUESTS)
     queue = [(node_source, [], 0)]
-    max_api_quotas = multiprocessing.Value("i", max_api_quotas)
-    lock = multiprocessing.Lock()
     paths = []
 
     solution_paths = []
@@ -741,13 +726,12 @@ class VTGraph(object):
         solution_paths,
         visited_nodes,
         max_api_quotas,
-        lock,
         max_depth
     )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
 
-      while max_api_quotas.value > 0 and target_nodes and queue:
+      while max_api_quotas > 0 and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
         results = pool.map(expand_parallel_partial_, queue)
         queue = []
