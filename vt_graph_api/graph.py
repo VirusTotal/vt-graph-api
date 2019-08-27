@@ -681,8 +681,8 @@ class VTGraph(object):
           lock.release()
         i += 1
       self._log("terminate")
+    expansion_pool.shutdown(wait=False)
     self._log("at exit")
-
     return expansion_nodes
 
   def _search_connection(self, node_source, target_nodes,
