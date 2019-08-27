@@ -658,6 +658,7 @@ class VTGraph(object):
           not_visited_nodes = (node for node in nodes__
                                if node not in visited_nodes)
           for node_ in not_visited_nodes:
+            lock.acquire()
             if node_ in target_nodes:
               self._log('match %s' % i)
               path.append(
@@ -680,6 +681,7 @@ class VTGraph(object):
                                node_.node_type)],
                       depth + 1)
                   )
+            lock.release()
           self._log('finish %s' % i)
           i += 1
 
