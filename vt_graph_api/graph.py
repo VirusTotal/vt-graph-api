@@ -742,12 +742,11 @@ class VTGraph(object):
         max_depth
     )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
 
       while max_api_quotas.value > 0 and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
         results = pool.map(expand_parallel_partial_, queue)
-        self._log(results)
         queue = []
         for list_ in results:
           for item in list_:
