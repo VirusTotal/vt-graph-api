@@ -685,6 +685,7 @@ class VTGraph(object):
                       depth + 1)
                   )
           i += 1
+    self._log(len(expansion_nodes))
 
     return expansion_nodes
 
@@ -742,7 +743,7 @@ class VTGraph(object):
         max_depth
     )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
 
       while max_api_quotas.value > 0 and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
