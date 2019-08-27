@@ -12,6 +12,7 @@ Examples:
 """
 
 
+import collections
 import functools
 import json
 import logging
@@ -724,7 +725,11 @@ class VTGraph(object):
     paths = []
 
     # shared variables
-    max_api_quotas = multiprocessing.Value("i", max_api_quotas)
+    class Integer:
+      def __init__(self, val):
+        self.value = val
+
+    max_api_quotas = Integer(max_api_quotas)
     lock = threading.Lock()
     solution_paths = []
     visited_nodes = list([node_source])
