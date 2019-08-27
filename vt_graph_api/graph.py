@@ -747,11 +747,11 @@ class VTGraph(object):
       while max_api_quotas.value > 0 and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
         results = pool.map(expand_parallel_partial_, queue)
+        self._log(results)
         queue = []
         for list_ in results:
           for item in list_:
             queue.append(item)
-        self._log(len(queue))
       paths = list(solution_paths)
 
     return paths
