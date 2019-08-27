@@ -688,6 +688,7 @@ class VTGraph(object):
             lock.release()
           self._log('finish %s' % i)
           i += 1
+        self._log('terminate')
 
     return expansion_nodes
 
