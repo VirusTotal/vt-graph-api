@@ -746,7 +746,10 @@ class VTGraph(object):
         # results = pool.map(expand_parallel_partial_, queue)
         queue = []
         for thread in threads:
+          self._log('wait thread')
           queue.extend(thread.result())
+          self._log('thread waited')
+          self._log(queue)
       paths = list(solution_paths)
 
     return paths
