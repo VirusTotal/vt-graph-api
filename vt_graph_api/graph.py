@@ -686,9 +686,6 @@ class VTGraph(object):
       self._log("a")
       expansion_pool._work_queue.put(None)
       self._log("b")
-      for t in expansion_pool._threads:
-          t.join()
-          self._log("c")
     self._log("at exit")
     return expansion_nodes
 
