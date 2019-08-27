@@ -649,12 +649,12 @@ class VTGraph(object):
           break
 
       i = 0
-      for future in concurrent.futures.as_completed(expansion_threads):
-        nodes__, _ = future.result()
+      while i < len(expansion_threads) and target_nodes:
+        nodes__, _ = expansion_threads[i].result()
         expansion_type = expansions[i]
 
         not_visited_nodes = (node for node in nodes__
-                             if node not in visited_nodes)
+                              if node not in visited_nodes)
         for node_ in not_visited_nodes:
           lock.acquire()
           if node_ in target_nodes:
@@ -679,10 +679,16 @@ class VTGraph(object):
                     depth + 1)
                 )
           lock.release()
-          i += 1
-
+        i += 1
       self._log("terminate")
-    expansion_pool.shutdown(wait=True)
+    with expansion_pool._shutdown_lock:
+      expansion_pool._shutdown = True
+      self._log("a")
+      expansion_pool._work_queue.put(None)
+      self._log("b")
+      for t in expansion_pool._threads:
+          t.join()
+          self._log("c")
     self._log("at exit")
     return expansion_nodes
 
