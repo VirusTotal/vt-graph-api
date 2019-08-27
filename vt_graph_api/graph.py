@@ -16,7 +16,8 @@ import functools
 import json
 import logging
 import multiprocessing
-import multiprocessing.pool
+
+import concurrent.futures
 import requests
 import six
 from vt_graph_api.errors import CollaboratorNotFoundError
@@ -26,6 +27,7 @@ from vt_graph_api.errors import NodeNotSupportedExpansionError
 from vt_graph_api.errors import SameNodeError
 from vt_graph_api.errors import SaveGraphError
 from vt_graph_api.node import Node
+from vt_graph_api.version import __version__
 
 
 class VTGraph(object):
@@ -117,10 +119,10 @@ class VTGraph(object):
     """Get node detections from attributes.
 
     Args:
-        node (Node): node from which detections are getted.
+      node (Node): node from which detections are getted.
 
     Returns:
-        dict: with the node detections in VT api format.
+      int: with the number of detections.
     """
     return (
         node.attributes["last_analysis_stats"]["malicious"] +
@@ -128,8 +130,7 @@ class VTGraph(object):
     )
 
   def _add_node_to_output(self, output, node_id):
-    """Add the node with the given node_id to the output,
-    in order to send information to VT API.
+    """Add the node with the given node_id to the output.
 
     Args:
       output (dict): graph structure in json representation to be consumed
@@ -327,7 +328,7 @@ class VTGraph(object):
             "attributes": {
                 "graph_data": {
                     "description": self.name,
-                    "version": self.X_TOOL,
+                    "version": __version__,
                 },
                 "private": self.private,
                 "nodes": [],
@@ -404,11 +405,10 @@ class VTGraph(object):
 
     It consumes API quota.
     """
-    headers = self._get_headers()
     url = "https://www.virustotal.com/api/v3/files/{node_id}".format(
         node_id=node_id
     )
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=self._get_headers())
     if response.status_code == 200:
       data = response.json()
       node_id = data.get("data", dict()).get(
@@ -450,7 +450,6 @@ class VTGraph(object):
     Returns:
       str: the correct node_id for the given identifier.
     """
-    self._log("Getting real ID for: {node_id}".format(node_id=node_id))
     if Node.is_url(node_id):
       new_id = self._get_url_id(node_id)
       if new_id in six.iterkeys(self.nodes):
@@ -621,71 +620,74 @@ class VTGraph(object):
     expansion_threads = []
     expansion_nodes = []
     expansions = node.expansions_available
-    expansion_pool = multiprocessing.pool.ThreadPool(processes=len(expansions))
-    has_quota = False
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(expansions)
+    ) as expansion_pool:
+      has_quota = False
 
-    if depth + 1 < max_depth:
-      for expansion in expansions:
-        # syncrhonize api quotas consumed
-        lock.acquire()
-        max_api_quotas.value -= 1
-        if max_api_quotas.value > -1:
-          has_quota = True
-        else:
-          i = len(expansions)
-        lock.release()
-        # release api quotas
+      if depth + 1 < max_depth:
+        for expansion in expansions:
+          # syncrhonize api quotas consumed
+          lock.acquire()
+          max_api_quotas.value -= 1
+          if max_api_quotas.value > -1:
+            has_quota = True
+          else:
+            i = len(expansions)
+          lock.release()
+          # release api quotas
 
-        if has_quota:
-          expansion_threads.append(
-              expansion_pool.apply_async(
-                  self._get_expansion_nodes, (node, expansion, 40)
-              )
-          )
-          has_quota = False
-
-      i = 0
-      while i < len(expansion_threads) and target_nodes:
-        nodes__, _ = expansion_threads[i].get()
-        expansion_type = expansions[i]
-
-        not_visited_nodes = (node for node in nodes__
-                             if node not in visited_nodes)
-        for node_ in not_visited_nodes:
-          if node_ in target_nodes:
-            path.append(
-                (
-                    node.node_id,
-                    node_.node_id,
-                    expansions[i],
-                    node_.node_type
+          if has_quota:
+            expansion_threads.append(
+                expansion_pool.submit(
+                    self._get_expansion_nodes,
+                    node,
+                    expansion,
+                    40
                 )
             )
+            has_quota = False
 
-            solution_paths.append(path)
+        i = 0
+        while i < len(expansion_threads) and target_nodes:
+          nodes__, _ = expansion_threads[i].result()
+          expansion_type = expansions[i]
 
-            try:
-              target_nodes.remove(node_)
-            except ValueError:
-              self._log(
-                  "Error appending element to multiprocessing " +
-                  "proxy list"
+          not_visited_nodes = (node for node in nodes__
+                               if node not in visited_nodes)
+          for node_ in not_visited_nodes:
+            if node_ in target_nodes:
+              path.append(
+                  (
+                      node.node_id,
+                      node_.node_id,
+                      expansions[i],
+                      node_.node_type
+                  )
               )
 
-          else:
-            expansion_nodes.append(
-                (
-                    node_,
-                    path + [(node.node_id,
-                             node_.node_id,
-                             expansion_type,
-                             node_.node_type)],
-                    depth + 1)
-                )
-        i += 1
+              solution_paths.append(path)
 
-    expansion_pool.close()
-    expansion_pool.join()
+              try:
+                target_nodes.remove(node_)
+              except ValueError:
+                self._log(
+                    "Error appending element to multiprocessing " +
+                    "proxy list"
+                )
+
+            else:
+              expansion_nodes.append(
+                  (
+                      node_,
+                      path + [(node.node_id,
+                               node_.node_id,
+                               expansion_type,
+                               node_.node_type)],
+                      depth + 1)
+                  )
+          i += 1
+
     return expansion_nodes
 
   def _search_connection(self, node_source, target_nodes,
@@ -743,19 +745,17 @@ class VTGraph(object):
           max_depth
       )
 
-      pool = multiprocessing.pool.ThreadPool(processes=max_ratio)
+      with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
 
-      while max_api_quotas.value > 0 and target_nodes and queue:
-        visited_nodes.extend([node[0] for node in queue])
-        results = pool.map(expand_parallel_partial_, queue)
-        queue = []
-        for list_ in results:
-          for item in list_:
-            queue.append(item)
+        while max_api_quotas.value > 0 and target_nodes and queue:
+          visited_nodes.extend([node[0] for node in queue])
+          results = pool.map(expand_parallel_partial_, queue)
+          queue = []
+          for list_ in results:
+            for item in list_:
+              queue.append(item)
 
-      paths = list(solution_paths)
-      pool.close()
-      pool.join()
+        paths = list(solution_paths)
 
     return paths
 
@@ -874,14 +874,16 @@ class VTGraph(object):
       )
 
     expansions_available = self.nodes[node_id].expansions_available
-    pool = multiprocessing.pool.ThreadPool(processes=len(expansions_available))
-    for expansion in expansions_available:
-      pool.apply_async(
-          self.expand,
-          (node_id, expansion, max_nodes_per_relationship)
-      )
-    pool.close()
-    pool.join()
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(expansions_available)
+    ) as pool:
+      for expansion in expansions_available:
+        pool.submit(
+            self.expand,
+            node_id,
+            expansion,
+            max_nodes_per_relationship
+        )
 
   def expand_n_level(self, level=1, max_nodes_per_relationship=40,
                      max_nodes=10000):

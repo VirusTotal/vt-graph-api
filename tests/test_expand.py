@@ -18,7 +18,7 @@ test_graph = vt_graph_api.VTGraph(
 
 
 def test_get_expansion_nodes_one_level(mocker):
-  """Test get expansion nodes at once level"""
+  """Test get expansion nodes at once level."""
   request_data = {
       "data": [
           {
@@ -41,14 +41,18 @@ def test_get_expansion_nodes_one_level(mocker):
   )
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
-  expansion_nodes, _ = test_graph._get_expansion_nodes(node_a, "similar_files", 20)
+  expansion_nodes, _ = test_graph._get_expansion_nodes(
+      node_a,
+      "similar_files",
+      20
+  )
   assert test_graph._get_expansion_nodes.call_count == 1
   assert node_b in expansion_nodes
   mocker.resetall()
 
 
 def test_get_expansion_nodes_n_level_with_cursor(mocker):
-  """Test get expansion nodes at n level without cursor"""
+  """Test get expansion nodes at n level without cursor."""
   request_data = {
       "data": [
           {
@@ -74,14 +78,18 @@ def test_get_expansion_nodes_n_level_with_cursor(mocker):
   )
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
-  expansion_nodes, _ = test_graph._get_expansion_nodes(node_a, "similar_files", 40)
+  expansion_nodes, _ = test_graph._get_expansion_nodes(
+      node_a,
+      "similar_files",
+      40
+  )
   assert test_graph._get_expansion_nodes.call_count == 40
   assert node_b in expansion_nodes
   mocker.resetall()
 
 
 def test_get_expansion_nodes_n_level_without_cursor(mocker):
-  """Test get expansion nodes at n level without cursor"""
+  """Test get expansion nodes at n level without cursor."""
   request_data = {
       "data": [
           {
@@ -104,7 +112,11 @@ def test_get_expansion_nodes_n_level_without_cursor(mocker):
   )
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
-  expansion_nodes, _ = test_graph._get_expansion_nodes(node_a, "similar_files", 1000)
+  expansion_nodes, _ = test_graph._get_expansion_nodes(
+      node_a,
+      "similar_files",
+      1000
+  )
   assert test_graph._get_expansion_nodes.call_count == 1
   assert node_b in expansion_nodes
   mocker.resetall()

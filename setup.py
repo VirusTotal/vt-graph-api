@@ -22,7 +22,8 @@ with open("README.md", "r") as fh:
 
 install_requires = [
     "requests",
-    "six"
+    "six",
+    "futures"
 ]
 
 setuptools.setup(
