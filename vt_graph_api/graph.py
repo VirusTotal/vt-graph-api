@@ -621,7 +621,7 @@ class VTGraph(object):
     expansion_nodes = []
     expansions = node.expansions_available
 
-    pool = concurrent.futures.ThreadPoolExecutor(
+    expansion_pool = concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions)
     )
     has_quota = False
