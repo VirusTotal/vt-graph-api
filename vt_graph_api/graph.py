@@ -643,13 +643,16 @@ class VTGraph(object):
                     40
                 )
             )
+            self._log('added to expansion threads')
             has_quota = False
           else:
             break
 
         i = 0
         while i < len(expansion_threads) and target_nodes:
+          self._log('waiting %s' % i)
           nodes__, _ = expansion_threads[i].result()
+          self._log('resulted')
           expansion_type = expansions[i]
 
           not_visited_nodes = (node for node in nodes__
