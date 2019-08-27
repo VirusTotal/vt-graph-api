@@ -585,10 +585,11 @@ class VTGraph(object):
             consumed_quotas=consumed_quotas
         )
 
+    self._log(expansion_nodes)
     return expansion_nodes, consumed_quotas
 
   def _parallel_expansion(self, target_nodes, solution_paths, visited_nodes,
-                          max_api_quotas, max_depth, item):
+                          max_api_quotas, lock, max_depth, item):
     """Parallelize node expansion synchronizing api quotas consumed.
 
     Args:
@@ -623,11 +624,18 @@ class VTGraph(object):
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions)
     ) as expansion_pool:
+      has_quota = False
 
       if depth + 1 < max_depth:
         for expansion in expansions:
-          if max_api_quotas > 0:
-            max_api_quotas -= 1
+          # syncrhonize api quotas consumed
+          lock.acquire()
+          max_api_quotas.value -= 1
+          if max_api_quotas.value > -1:
+            has_quota = True
+          lock.release()
+
+          if has_quota:
             expansion_threads.append(
                 expansion_pool.submit(
                     self._get_expansion_nodes,
@@ -636,6 +644,9 @@ class VTGraph(object):
                     40
                 )
             )
+            has_quota = False
+          else:
+            break
 
         i = 0
         while i < len(expansion_threads) and target_nodes:
@@ -654,16 +665,8 @@ class VTGraph(object):
                       node_.node_type
                   )
               )
-
               solution_paths.append(path)
-
-              try:
-                target_nodes.remove(node_)
-              except ValueError:
-                self._log(
-                    "Error appending element to multiprocessing " +
-                    "proxy list"
-                )
+              target_nodes.remove(node_)
             else:
               expansion_nodes.append(
                   (
@@ -717,21 +720,26 @@ class VTGraph(object):
     queue = [(node_source, [], 0)]
     paths = []
 
+    # shared variables
+    max_api_quotas = multiprocessing.Value("i", max_api_quotas)
+    lock = multiprocessing.Lock()
     solution_paths = []
     visited_nodes = list([node_source])
     target_nodes = list(target_nodes)
+
     expand_parallel_partial_ = functools.partial(
         self._parallel_expansion,
         target_nodes,
         solution_paths,
         visited_nodes,
         max_api_quotas,
+        lock,
         max_depth
     )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
 
-      while max_api_quotas > 0 and target_nodes and queue:
+      while max_api_quotas.value > 0 and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
         results = pool.map(expand_parallel_partial_, queue)
         queue = []
