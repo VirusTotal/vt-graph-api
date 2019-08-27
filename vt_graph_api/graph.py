@@ -620,6 +620,7 @@ class VTGraph(object):
     expansion_threads = []
     expansion_nodes = []
     expansions = node.expansions_available
+
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions)
     ) as expansion_pool:
@@ -649,7 +650,8 @@ class VTGraph(object):
             break
 
         i = 0
-        while i < len(expansion_threads):
+        stop = False
+        while i < len(expansion_threads) and not stop:
           self._log('waiting %s' % i)
           nodes__, _ = expansion_threads[i].result()
           self._log('resulted in %s: %s' % (i, nodes__))
@@ -671,6 +673,8 @@ class VTGraph(object):
               )
               solution_paths.append(path)
               target_nodes.remove(node_)
+              if not target_nodes:
+                stop = True
             else:
               expansion_nodes.append(
                   (
