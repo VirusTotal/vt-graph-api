@@ -585,7 +585,6 @@ class VTGraph(object):
             consumed_quotas=consumed_quotas
         )
 
-    self._log(expansion_nodes)
     return expansion_nodes, consumed_quotas
 
   def _parallel_expansion(self, target_nodes, solution_paths, visited_nodes,
@@ -741,11 +740,13 @@ class VTGraph(object):
 
       while max_api_quotas.value > 0 and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
-        results = pool.map(expand_parallel_partial_, queue)
+        threads = []
+        for node_ in queue:
+          threads.append(pool.submit(expand_parallel_partial_, node_))
+        # results = pool.map(expand_parallel_partial_, queue)
         queue = []
-        for list_ in results:
-          for item in list_:
-            queue.append(item)
+        for thread in threads:
+          queue.extend(thread.result())
       paths = list(solution_paths)
 
     return paths
