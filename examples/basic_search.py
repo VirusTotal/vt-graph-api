@@ -1,7 +1,6 @@
 # pylint: disable=superfluous-parens
 """VTGraph basic search usage example."""
 
-import time
 from vt_graph_api import VTGraph
 
 
@@ -16,9 +15,9 @@ graph = VTGraph(
     name="First Graph API test"
 )
 
+# Add some nodes to graph.
 graph.add_node("b3b7d8a4daee86280c7e54b0ff3283afe3579480", "file", True)
 graph.add_node("nsis.sf.net", "domain", True)
-start_time = time.time()
 
 graph.add_links_if_match(
     "b3b7d8a4daee86280c7e54b0ff3283afe3579480",
@@ -27,7 +26,7 @@ graph.add_links_if_match(
     max_depth=10
 )
 
-print("--- %s seconds ---" % (time.time() - start_time))
+# Try to connect node with graph.
 graph.save_graph()
 
 # Get the graph id

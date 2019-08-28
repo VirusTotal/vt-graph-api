@@ -1,4 +1,7 @@
-"""vt_graph_api exports."""
+"""vt_graph_api.
+
+vt_graph_api package exports.
+"""
 
 
 from vt_graph_api.graph import VTGraph

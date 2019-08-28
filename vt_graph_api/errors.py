@@ -1,4 +1,8 @@
-"""This module contains all custom exceptions that could be thrown by the methods in this package."""
+"""vt_graph_api.errors.
+
+This modules provides all errors that could be thrown by
+the methods in vt_graph_api package.
+"""
 
 
 class NodeNotFoundError(Exception):

@@ -15,7 +15,6 @@ Examples:
 import functools
 import json
 import logging
-import multiprocessing
 import threading
 
 import concurrent.futures
@@ -89,7 +88,7 @@ class VTGraph(object):
 
     self.graph_id = ""
     self.name = name
-    self.api_calls = 0
+    self._api_calls = 0
     self.private = private
     self.user_editors = user_editors or []
     self.user_viewers = user_viewers or []
@@ -100,6 +99,7 @@ class VTGraph(object):
     self.nodes = {}
     self.links = {}
 
+    self._api_calls_lock = threading.Lock()
     self._index = 0
     self._logger = logging.getLogger("vt_graph")
     self._logger.addHandler(logging.StreamHandler())
@@ -110,8 +110,6 @@ class VTGraph(object):
 
     Args:
       msg (string): message.
-
-    This call does NOT consume API quota.
     """
     if self.verbose:
       self._logger.info(msg)
@@ -263,6 +261,7 @@ class VTGraph(object):
         node_id=node.node_id
     )
     response = requests.get(url, headers=headers)
+    self._increment_api_counter()
     if response.status_code == 200:
       data = response.json()
     else:
@@ -320,6 +319,8 @@ class VTGraph(object):
       CollaboratorNotFound: if any of the collaborators is not found in
         VirusTotal user and group database.
       SaveGraphError: if something went bad when saving the graph.
+
+    This call not consume API quota.
     """
     self._log("Saving the graph")
     self._index = 0
@@ -388,14 +389,25 @@ class VTGraph(object):
     self._add_viewers()
 
   def _increment_api_counter(self):
-    """Increments api counter."""
-    self.api_calls += 1
+    """Increments api counter in thread safe mode."""
+    with self._api_calls_lock:
+      self._api_calls += 1
+      new_api_calls_value = self._api_calls
+
     self._log("API counter incremented. Total value: {api_calls}".format(
-        api_calls=self.api_calls
+        api_calls=new_api_calls_value
     ))
 
+  def get_api_calls(self):
+    """Get api counter in thread safe mode."""
+    with self._api_calls_lock:
+      api_calls = self._api_calls
+    return api_calls
+
   def _get_file_sha_256(self, node_id):
-    """Return the sha256 hash for node_id with file type if matches found in VT, else return simple node_id.
+    """Return the sha256 hash for node_id.
+
+    It only retruns sha256 if matches found in VT, else return node_id.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
@@ -442,7 +454,10 @@ class VTGraph(object):
     return node_id
 
   def _get_node_id(self, node_id):
-    """Return the correct node_id in case of the file node with no sha256 hash or url instead of sha256.
+    """Return the correct node_id.
+
+    It only change the given node_id in case of file node with no sha256 hash
+    or url instead of VT url identifier.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
@@ -492,7 +507,8 @@ class VTGraph(object):
         expansion in the given expansion type, and number with api
         quotas consumed.
 
-    It consumes API quota. One for each expansion node expansion.
+    It consumes API quota. One for each call nedeed to achieve
+    max_nodes_per_relationship.
     """
     expansion_nodes = expansion_nodes or []
     parent_node_id = node.node_id
@@ -503,7 +519,8 @@ class VTGraph(object):
     limit = min(max_nodes_per_relationship, self.MAX_API_EXPANSION_LIMIT)
 
     url = (
-        "https://www.virustotal.com/api/v3/{end_point}/{node_id}/{expansion}?limit={limit}"
+        "https://www.virustotal.com/api/v3/" +
+        "{end_point}/{node_id}/{expansion}?limit={limit}"
         .format(
             end_point=end_point,
             node_id=node.node_id,
@@ -594,13 +611,15 @@ class VTGraph(object):
 
     Args:
       target_nodes ([Node]): target node.
-      solution_paths (multiprocessing.managers.ListProxy): synchronized
-        list with the path.
-      visited_nodes (multiprocessing.managers.ListProxy): synchronized
-        list with the nodes.
-      max_api_quotas (multiprocessing.synchronize.Value): synchronized
-        value with max api quotas.
-      lock (multiprocessing.synchronize.Lock): lock.
+      solution_paths ([paths]): synchronized list of paths. A path
+        is a list of tuples (source, target, expansion_type, source_type) where
+        source (Node) -> relation parent node.
+        target (Node) -> relation child node.
+        expansion_type (str) -> expansion which has produced the relationship.
+        source_type (str) -> relation child node type.
+      visited_nodes ([Node]): synchronized list with the nodes.
+      max_api_quotas ([int]): synchronized list with max api quotas value.
+      lock (threading.Lock): lock.
       max_depth (int): max depth.
       item (Node, list, int): structure with the node, path to
         node and actual node depth.
@@ -630,11 +649,13 @@ class VTGraph(object):
 
       if depth + 1 < max_depth:
         for expansion in expansions:
-          # syncrhonize api quotas consumed
+          # make get api quota thread safe
           with lock:
-            max_api_quotas.value -= 1
-            if max_api_quotas.value > -1:
+            quotas_left = max_api_quotas.pop()
+            quotas_left -= 1
+            if quotas_left > -1:
               has_quota = True
+            max_api_quotas.append(quotas_left)
 
           if has_quota:
             futures.append(
@@ -659,6 +680,8 @@ class VTGraph(object):
                                if node not in visited_nodes)
 
           for node_ in not_visited_nodes:
+            # make deleting node achieved from target_nodes
+            # thread safe
             with lock:
               if node_ in target_nodes:
                 path.append(
@@ -721,9 +744,10 @@ class VTGraph(object):
     max_ratio = min(max_ratio, self.MAX_PARALLEL_REQUESTS)
     queue = [(node_source, [], 0)]
     paths = []
+    has_quota = True
 
     # shared variables
-    max_api_quotas = multiprocessing.Value("i", max_api_quotas)
+    max_api_quotas = [max_api_quotas]
     lock = threading.Lock()
     solution_paths = []
     visited_nodes = list([node_source])
@@ -741,7 +765,7 @@ class VTGraph(object):
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
 
-      while max_api_quotas.value > 0 and target_nodes and queue:
+      while has_quota and target_nodes and queue:
         visited_nodes.extend([node[0] for node in queue])
         futures = []
         for node_ in queue:
@@ -749,6 +773,10 @@ class VTGraph(object):
         queue = []
         for future in futures:
           queue.extend(future.result())
+        with lock:
+          quotas_left = max_api_quotas.pop()
+          has_quota = quotas_left > 0
+          max_api_quotas.append(quotas_left)
 
     paths = list(solution_paths)
     return paths
@@ -778,7 +806,9 @@ class VTGraph(object):
     Returns:
       Node: the node object appended to graph.
 
-    This call consumes API quota if fetch_information=True.
+    This call consumes API quota if fetch_information=True. It also consumes
+    API quota if the given node_id is not standat, for example a file with id
+    in SHA1 or MD5 or URL without VT identifier.
     """
     if node_type == "file" and len(node_id) != 64:
       node_id = self._get_file_sha_256(node_id)
@@ -842,7 +872,7 @@ class VTGraph(object):
       self.add_link(node_id, new_node.node_id, expansion)
 
   def expand_one_level(self, node_id, max_nodes_per_relationship=40):
-    """Expands 20 relations for each relationship that we know in VirusTotal for the give node.
+    """Expands all relationship that we know in VirusTotal for the give node.
 
     Args:
       node_id (str): node ID.
@@ -964,8 +994,12 @@ class VTGraph(object):
     self.links[(node_source, node_target, connection_type)] = True
 
   def add_links_if_match(self, node_source, node_target,
-                         max_api_quotas=100000, max_depth=5, max_ratio=1000):
-    """Adds the needed links between node_source and node_target if node_target could be achieved by node_source.
+                         max_api_quotas=100000, max_depth=3, max_ratio=1000,
+                         fetch_info_collected_nodes=True):
+    """Try to find relation between node_source and node_target.
+
+    Adds the needed links between node_source and node_target if
+    node_target could be achieved by node_source.
 
     Args:
       node_source (str): source node ID.
@@ -973,9 +1007,13 @@ class VTGraph(object):
       max_api_quotas (int, optional): maximum number of api quotas thath could
         be consumed. Defaults to 100000.
       max_depth (int, optional): maximum number of hops between the nodes.
-        Defaults to 5. It must be less than 5.
+        Defaults to 3.
       max_ratio (int, optional): maximum number of multi-requests.
         Defaults to 1000.
+      fetch_info_collected_nodes (bool, optional): if True, when new node
+        is added to graph to compute the connection, it will be fetched
+        on VT for information. It consumes api quotas which are not include
+        in max_api_quota. Defaults to True.
 
     Returns:
       bool: whether relation has been found.
@@ -995,8 +1033,12 @@ class VTGraph(object):
           )
       )
 
+    quotas_before_get_id = self.get_api_calls()
     node_source = self._get_node_id(node_source)
     node_target = self._get_node_id(node_target)
+    quotas_after_get_id = self.get_api_calls()
+    max_api_quotas -= (quotas_after_get_id - quotas_before_get_id)
+
     if node_source not in self.nodes:
       raise NodeNotFoundError(
           "node '{node_id}' not found in nodes"
@@ -1033,14 +1075,15 @@ class VTGraph(object):
       if links:
         for links_ in links:
           for source_id, target_id, connection_type, target_type in links_:
-            self.add_node(target_id, target_type)
+            self.add_node(target_id, target_type, fetch_info_collected_nodes)
             self.links[(source_id, target_id, connection_type)] = True
         has_link = True
 
     return has_link
 
   def connect_with_graph(self, node_source, max_api_quotas=100000,
-                         max_depth=5, max_ratio=1000):
+                         max_depth=3, max_ratio=1000,
+                         fetch_info_collected_nodes=True):
     """Try to connect node_source with graph's nodes.
 
     Args:
@@ -1048,9 +1091,13 @@ class VTGraph(object):
         max_api_quotas (int, optional): maximum number of api quotas thath could
         be consumed. Defaults to 100000.
       max_depth (int, optional): maximum number of hops between the nodes.
-        Defaults to 5. It must be less than 5.
+        Defaults to 3.
       max_ratio (int, optional): maximum number of multi-requests.
         Defaults to 1000.
+      fetch_info_collected_nodes (bool, optional): if True, when new node
+        is added to graph to compute the connection, it will be fetched
+        on VT for information. It consumes api quotas which are not include
+        in max_api_quota. Defaults to True.
 
     Raises:
       NodeNotFound: if any node is not found.
@@ -1062,7 +1109,10 @@ class VTGraph(object):
     each expansion required to find the relations.
     """
 
+    quotas_before_get_id = self.get_api_calls()
     node_source = self._get_node_id(node_source)
+    quotas_after_get_id = self.get_api_calls()
+    max_api_quotas -= (quotas_after_get_id - quotas_before_get_id)
     if node_source not in self.nodes:
       raise NodeNotFoundError(
           "node '{node_id}' not found in nodes"
@@ -1093,7 +1143,7 @@ class VTGraph(object):
       if links:
         for links_ in links:
           for source_id, target_id, connection_type, target_type in links_:
-            self.add_node(target_id, target_type)
+            self.add_node(target_id, target_type, fetch_info_collected_nodes)
             self.links[(source_id, target_id, connection_type)] = True
         has_link = True
 
@@ -1133,8 +1183,10 @@ class VTGraph(object):
 
   def get_iframe_code(self):
     """Requires that save_graph was called."""
-    return """
-    <iframe src="https://www.virustotal.com/graph/embed/{graph_id}" width="800" height="600"></iframe>
-    """.format(
-        graph_id=self.graph_id
+    return (
+        "<iframe src=\"https://www.virustotal.com/graph/embed/" +
+        "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
+        .format(
+            graph_id=self.graph_id
+        )
     )
