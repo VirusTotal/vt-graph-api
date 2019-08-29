@@ -13,6 +13,9 @@ from vt_graph_api.errors import NodeNotSupportedTypeError
 URL_RE = re.compile(r"https?://", re.IGNORECASE)
 SHA1_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 MD5_RE = re.compile(r"^[0-9a-fA-F]{32}$")
+SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+IPV4_RE = re.compile(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$")
+DOMAIN_RE = re.compile(r"^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$")
 
 
 class Node(object):
@@ -24,6 +27,9 @@ class Node(object):
     expansions_available ([str]): available expansions for the node.
     attributes (dict): VirusTotal attribute dict.
     label (str): node name.
+    childrens (dict): dict with the childrens for each expansion type.
+    relationship_ids (dict): dict with the relationship id for each
+      expansion type.
   """
 
   SUPPORTED_NODE_TYPES = ("file", "url", "domain", "ip_address")
@@ -91,6 +97,10 @@ class Node(object):
     self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
     self.attributes = None
     self.label = ""
+    self.childrens = {
+        expansion_type: [] for expansion_type in self.expansions_available
+    }
+    self.relationship_ids = {}
 
   @staticmethod
   def is_url(node_id):
@@ -128,6 +138,42 @@ class Node(object):
     """
     return SHA1_RE.match(node_id)
 
+  @staticmethod
+  def is_sha256(node_id):
+    """Check if node_id belongs to sha256 hash.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to sha256 hash.
+    """
+    return SHA256_RE.match(node_id)
+
+  @staticmethod
+  def is_ipv4(node_id):
+    """Check if node_id belongs to ipv4.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to ipv4.
+    """
+    return IPV4_RE.match(node_id)
+
+  @staticmethod
+  def is_domain(node_id):
+    """Check if node_id belongs to domain name.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to domain name.
+    """
+    return DOMAIN_RE.match(node_id)
+
   def add_attributes(self, attributes):
     """Adds the attributes if the node doesn't have it yet.
 
@@ -145,6 +191,30 @@ class Node(object):
     """
     self.label = label
 
+  def add_child(self, node_id, expansion):
+    """Add child to Node in the given expansion.
+
+    Args:
+      node_id (str): child node id.
+      expansion (str): expansion for the given node_id.
+    """
+    if expansion in self.expansions_available:
+      self.childrens[expansion].append(node_id)
+
+  def delete_child(self, node_id, expansion):
+    """Delete child from Node in the given expansion.
+
+    Args:
+      node_id (str): child node id.
+      expansion (str): expansion for the given node_id.
+    """
+    if expansion in self.expansions_available:
+      self.childrens[expansion].remove(node_id)
+
+  def reset_relationship_ids(self):
+    """Reset relationship_ids."""
+    self.relationship_ids.clear()
+
   def __str__(self):
     return "%s: %s" % (self.node_id, self.attributes)
 
@@ -156,4 +226,12 @@ class Node(object):
 
   @staticmethod
   def get_id(node_id):
+    """Return the given node_id without dots.
+
+    Args:
+        node_id (Node): node ID.
+
+    Returns:
+        str: the given node_id without dots.
+    """
     return node_id.replace(".", "")

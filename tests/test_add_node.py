@@ -96,7 +96,7 @@ def test_add_node_url(mocker):
       added_node_id, "url",
       label="Investigation node"
   )
-  assert test_graph.nodes.get(added_node_id) is None
+  assert not test_graph.nodes.get(added_node_id)
   assert test_graph.nodes[added_node.node_id] == added_node
   mocker.resetall()
 
