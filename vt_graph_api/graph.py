@@ -29,6 +29,7 @@ from vt_graph_api.errors import SameNodeError
 from vt_graph_api.errors import SaveGraphError
 from vt_graph_api.node import Node
 from vt_graph_api.version import __version__
+from vt_graph_api.version import __x_tool__
 
 
 class VTGraph(object):
@@ -51,7 +52,6 @@ class VTGraph(object):
 
   MAX_API_EXPANSION_LIMIT = 40
   MAX_PARALLEL_REQUESTS = 1000
-  X_TOOL = "Graph"
   REQUEST_TIMEOUT = 40
 
   def __init__(
@@ -124,10 +124,13 @@ class VTGraph(object):
     Returns:
       int: with the number of detections.
     """
-    return (
-        node.attributes["last_analysis_stats"]["malicious"] +
-        node.attributes["last_analysis_stats"]["suspicious"]
-    )
+    if node.attributes.get("has_detections"):
+      return node.attributes["has_detections"]
+    else:
+      return (
+          node.attributes["last_analysis_stats"]["malicious"] +
+          node.attributes["last_analysis_stats"]["suspicious"]
+      )
 
   def _add_node_to_output(self, output, node_id):
     """Add the node with the given node_id to the output.
@@ -142,8 +145,8 @@ class VTGraph(object):
         "type": node.node_type,
         "entity_id": node.node_id,
         "index": self._index,
-        "x": 0,
-        "y": 0,
+        "x": node.x,
+        "y": node.y,
     }
 
     if node.label:
@@ -286,9 +289,16 @@ class VTGraph(object):
         SaveGraphError: if something went bad when saving the graph.
     """
     self._log("Saving local graph")
-    url = "https://www.virustotal.com/api/v3/graphs"
     headers = self._get_headers()
-    response = requests.post(url, headers=headers, data=json.dumps(output))
+    if self.graph_id:
+      url = (
+          "https://www.virustotal.com/api/v3/graphs/{graph_id}"
+          .format(graph_id=self.graph_id)
+      )
+      response = requests.patch(url, headers=headers, data=json.dumps(output))
+    else:
+      url = "https://www.virustotal.com/api/v3/graphs"
+      response = requests.post(url, headers=headers, data=json.dumps(output))
     if response.status_code == 200:
       data = response.json()
       if "data" in data:
@@ -455,6 +465,7 @@ class VTGraph(object):
     self._send_graph_to_vt(output)
     self._add_editors()
     self._add_viewers()
+    self._index = 0
 
   def _increment_api_counter(self):
     """Increments api counter in thread safe mode."""
@@ -476,6 +487,10 @@ class VTGraph(object):
     """Return the sha256 hash for node_id.
 
     It only retruns sha256 if matches found in VT, else return node_id.
+    If is_filename=True, it will be searched in VT Intelligence. If the
+    data returned by intelligence API give more than one result, it
+    cannot be possible to infer which one of them is the node we are
+    looking for.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
@@ -867,7 +882,7 @@ class VTGraph(object):
 
   def _get_headers(self):
     """Returns the request headers."""
-    return {"x-apikey": self.api_key, "x-tool": self.X_TOOL}
+    return {"x-apikey": self.api_key, "x-tool": __x_tool__}
 
   def _get_api_endpoint(self, node_type):
     """Returns the api end point."""
@@ -876,7 +891,10 @@ class VTGraph(object):
     else:
       return node_type + "s"
 
-  def add_node(self, node_id, node_type, fetch_information=True, label=""):
+  def add_node(self, node_id, node_type,
+               fetch_information=True, label="",
+               node_attributes=None,
+               x=0, y=0):
     """Adds a node with id `node_id` of `node_type` type to the graph.
 
     Args:
@@ -886,6 +904,11 @@ class VTGraph(object):
         information for this node in VT. If the node already exist in the graph
         it will not fetch information for it. Defaults to True.
       label(str, optional): label that appears next to the node. Defaults to "".
+      node_attributes(dict, optional): if it is set and fetch_information is
+        False, node_attributes will be added to new node with the given node id.
+        Defaults to None.
+      x (int, optional): X coordinate for Node representation in VT Graph GUI.
+      y (int, optional): Y coordinate for Node representation in VT Graph GUI.
 
     Returns:
       Node: the node object appended to graph.
@@ -896,11 +919,13 @@ class VTGraph(object):
     """
     node_id = self._get_node_id(node_id)
     if node_id not in six.iterkeys(self.nodes):
-      new_node = Node(node_id, node_type)
+      new_node = Node(node_id, node_type, x, y)
       if label:
         new_node.add_label(label)
       if fetch_information:
         self._fetch_information(new_node)
+      elif node_attributes:
+        new_node.add_attributes(node_attributes)
       self.nodes[node_id] = new_node
     return self.nodes[node_id]
 

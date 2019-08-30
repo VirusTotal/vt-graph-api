@@ -24,6 +24,8 @@ class Node(object):
   Attributes:
     node_id (str): node identifier.
     node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES.
+    x (int, optional): X coordinate for Node representation in VT Graph GUI.
+    y (int, optional): Y coordinate for Node representation in VT Graph GUI.
     expansions_available ([str]): available expansions for the node.
     attributes (dict): VirusTotal attribute dict.
     label (str): node name.
@@ -79,12 +81,14 @@ class Node(object):
       ],
   }
 
-  def __init__(self, node_id, node_type):
+  def __init__(self, node_id, node_type, x=0, y=0):
     """Creates an instance of a graph object.
 
     Args:
       node_id (str): node identifier.
       node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES
+      x (int, optional): X coordinate for Node representation in VT Graph GUI.
+      y (int, optional): Y coordinate for Node representation in VT Graph GUI.
 
     Raises:
       NodeNotSupportedTypeError: if node_type not in SUPPORTED_NODE_TYPES
@@ -93,6 +97,8 @@ class Node(object):
       raise NodeNotSupportedTypeError("Node type: %s not supported" % node_type)
     self.node_id = node_id
     self.node_type = node_type
+    self.x = x
+    self.y = y
 
     self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
     self.attributes = None

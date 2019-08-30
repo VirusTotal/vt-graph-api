@@ -127,6 +127,67 @@ def test_add_node_ip(mocker):
   mocker.resetall()
 
 
+def test_add_node_with_intelligence_search_and_found(mocker):
+  """Test add node with calling intelligence to search for the node id."""
+  request_data = {
+      "data": [
+          {
+              "id":
+                  "5504e04083d6146a67cb0d671d8ad588531" +
+                  "5062c9ee08a62e40e264c2d5eab91",
+              "type": "file"
+          }
+      ],
+      "meta": {
+          "total_hits": 1
+      }
+  }
+  mocker.patch.object(test_graph, "_fetch_information")
+  m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
+  mocker.patch("requests.get", return_value=m)
+  added_node_id = "dummy file.bak"
+  added_node = test_graph.add_node(
+      added_node_id, "file",
+      label="Investigation node"
+  )
+  assert not test_graph.nodes.get(added_node_id)
+  assert test_graph.nodes[added_node.node_id] == added_node
+  mocker.resetall()
+
+
+def test_add_node_with_intelligence_search_and_not_found(mocker):
+  """Test add node with calling intelligence without exactly result."""
+  request_data = {
+      "data": [
+          {
+              "id":
+                  "efa0b414a831cbf724d1c67808b7483dec2" +
+                  "2a981ae670947793d114048f880571",
+              "type": "file"
+          },
+          {
+              "id":
+                  "5504e04083d6146a67cb0d671d8ad588531" +
+                  "5062c9ee08a62e40e264c2d5eab91",
+              "type": "file"
+          }
+      ],
+      "meta": {
+          "total_hits": 2
+      }
+  }
+  mocker.patch.object(test_graph, "_fetch_information")
+  m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
+  mocker.patch("requests.get", return_value=m)
+  added_node_id = "dummy file.bak"
+  added_node = test_graph.add_node(
+      added_node_id, "file",
+      label="Investigation node"
+  )
+  assert test_graph.nodes[added_node_id] == added_node
+  mocker.resetall()
+
+
 def test_add_node_not_supported(mocker):
   """Test add node with not supported type."""
   with pytest.raises(vt_graph_api.errors.NodeNotSupportedTypeError,

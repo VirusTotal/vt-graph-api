@@ -31,3 +31,7 @@ class SameNodeError(Exception):
 
 class MaximumConnectionRetriesError(Exception):
   pass
+
+
+class LoaderError(Exception):
+  pass
