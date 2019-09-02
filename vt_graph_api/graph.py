@@ -125,8 +125,8 @@ class VTGraph(object):
       int: with the number of detections.
     """
     return (
-        node.attributes["last_analysis_stats"]["malicious"] +
-        node.attributes["last_analysis_stats"]["suspicious"]
+        node.attributes.get("last_analysis_stats", dict()).get("malicious", 0) +
+        node.attributes.get("last_analysis_stats", dict()).get("suspicious", 0)
     )
 
   def _add_node_to_output(self, output, node_id):
@@ -137,45 +137,49 @@ class VTGraph(object):
         by VT API.
       node_id (str): node ID.
     """
-    node = self.nodes[node_id]
+
+    node = self.nodes.get(node_id)
+    node_type = node.node_type if node else "relationship"
     node_data = {
-        "type": node.node_type,
-        "entity_id": node.node_id,
+        "type": node_type,
+        "entity_id": node_id,
         "index": self._index,
         "x": 0,
         "y": 0,
     }
 
-    if node.label:
-      node_data["text"] = node.label
+    if node:
 
-    if node.attributes:
-      if node.node_type == "file":
-        has_detections = self._get_node_detections(node)
-        entity_attributes = {
-            "has_detections": has_detections,
-        }
+      if node.label:
+        node_data["text"] = node.label
 
-        if "type_tag" in node.attributes:
-          entity_attributes["type_tag"] = node.attributes["type_tag"]
+      if node.attributes:
+        if node.node_type == "file":
+          has_detections = self._get_node_detections(node)
+          entity_attributes = {
+              "has_detections": has_detections,
+          }
 
-        node_data["entity_attributes"] = entity_attributes
+          if "type_tag" in node.attributes:
+            entity_attributes["type_tag"] = node.attributes["type_tag"]
 
-      # Ip Address.
-      elif (node.node_type == "ip_address" and
-            "country" in node.attributes):
-        entity_attributes = {
-            "country": node.attributes["country"],
-        }
-        node_data["entity_attributes"] = entity_attributes
+          node_data["entity_attributes"] = entity_attributes
 
-      # Urls.
-      elif node.node_type == "url":
-        has_detections = self._get_node_detections(node)
-        entity_attributes = {
-            "has_detections": has_detections,
-        }
-        node_data["entity_attributes"] = entity_attributes
+        # Ip Address.
+        elif (node.node_type == "ip_address" and
+              "country" in node.attributes):
+          entity_attributes = {
+              "country": node.attributes["country"],
+          }
+          node_data["entity_attributes"] = entity_attributes
+
+        # Urls.
+        elif node.node_type == "url":
+          has_detections = self._get_node_detections(node)
+          entity_attributes = {
+              "has_detections": has_detections,
+          }
+          node_data["entity_attributes"] = entity_attributes
 
     output["data"]["attributes"]["nodes"].append(node_data)
     self._index += 1
@@ -253,6 +257,8 @@ class VTGraph(object):
 
     Args:
         node (Node): node to be searched in VT.
+
+    It consumes API quota.
     """
     data = {}
     headers = self._get_headers()
@@ -285,7 +291,6 @@ class VTGraph(object):
     Raises:
         SaveGraphError: if something went bad when saving the graph.
     """
-    self._log("Saving local graph")
     url = "https://www.virustotal.com/api/v3/graphs"
     headers = self._get_headers()
     response = requests.post(url, headers=headers, data=json.dumps(output))
@@ -318,33 +323,36 @@ class VTGraph(object):
     nodes = list(six.itervalues(self.nodes))
     # First, node.relationship_ids will be reseted for each
     # node in self.nodes in order to compute them again
-    for node_ in nodes:
-      node_.reset_relationship_ids()
+    for node in nodes:
+      node.reset_relationship_ids()
 
-    calculated_nodes = []
-    for node_ in nodes:
+    calculated_nodes = set()
+    for node in nodes:
       to_minimize = []
-      calculated_nodes.append(node_)
-      nodes_ = (node for node in nodes if node not in calculated_nodes)
-      for node__ in nodes_:
+      calculated_nodes.add(node.node_id)
+      not_visited_nodes = (
+          node for node in nodes
+          if node.node_id not in calculated_nodes
+      )
+      for node_ in not_visited_nodes:
         # The interescteion between possible expansion of each node give
         # us the common expansions
         shared_expansions = (
-            set(node_.expansions_available)
-            .intersection(set(node__.expansions_available))
+            set(node.expansions_available)
+            .intersection(set(node_.expansions_available))
         )
-        # Two nodes could be minimized it they have the sames childrens in the
+        # Two nodes could be minimized it they have the same children in the
         # same expansion and they have at least one child.
         minimize_expansion = (
             expansion for expansion in shared_expansions
-            if node_.childrens[expansion]
+            if node.childrens[expansion]
         )
         for expansion in minimize_expansion:
           if (
-              collections.Counter(node_.childrens[expansion]) ==
-              collections.Counter(node__.childrens[expansion])
+              collections.Counter(node.childrens[expansion]) ==
+              collections.Counter(node_.childrens[expansion])
           ):
-            to_minimize.append((node__, expansion))
+            to_minimize.append((node_, expansion))
 
       # Once the possible minimizations are computed, it is time to
       # generate the relationship id and set it to the minimized nodes.
@@ -352,33 +360,33 @@ class VTGraph(object):
         # if no one have relationship id yet, it will be create and added,
         # otherwise the relationship id will be getted from the one which
         # has it.
-        if (not node_.relationship_ids.get(expansion) and
+        if (not node.relationship_ids.get(expansion) and
             not node_to_minimize.relationship_ids.get(expansion)):
           relationship_id = "relationships_{expansion}_{node_id}".format(
               expansion=expansion,
-              node_id=Node.get_id(node_.node_id)
+              node_id=Node.get_id(node.node_id)
           )
-          node_.relationship_ids[expansion] = relationship_id
+          node.relationship_ids[expansion] = relationship_id
           node_to_minimize.relationship_ids[expansion] = relationship_id
-        elif not node_.relationship_ids.get(expansion):
+        elif not node.relationship_ids.get(expansion):
           relationship_id = node_to_minimize.relationship_ids.get(expansion)
-          node_.relationship_ids[expansion] = relationship_id
+          node.relationship_ids[expansion] = relationship_id
         else:
-          relationship_id = node_.relationship_ids.get(expansion)
+          relationship_id = node.relationship_ids.get(expansion)
           node_to_minimize.relationship_ids[expansion] = relationship_id
 
-      # Finally generates sigle relationship_id for each expansion for
+      # Finally generate single relationship_id for each expansion for
       # each node of the graph.
       singles_expansion_relationship = (
-          set(node_.expansions_available) -
-          set(six.iterkeys(node_.relationship_ids))
+          set(node.expansions_available) -
+          set(six.iterkeys(node.relationship_ids))
       )
       for expansion in singles_expansion_relationship:
         relationship_id = "relationships_{expansion}_{node_id}".format(
             expansion=expansion,
-            node_id=Node.get_id(node_.node_id)
+            node_id=Node.get_id(node.node_id)
         )
-        node_.relationship_ids[expansion] = relationship_id
+        node.relationship_ids[expansion] = relationship_id
 
   def save_graph(self):
     """Saves the graph into VirusTotal Graph database.
@@ -425,15 +433,8 @@ class VTGraph(object):
       # Relationship node.
       relationship_id = self.nodes[source_id].relationship_ids.get(expansion)
       if relationship_id not in added:
-        output["data"]["attributes"]["nodes"].append({
-            "type": "relationship",
-            "entity_id": relationship_id,
-            "index": self._index,
-            "x": 0,
-            "y": 0,
-        })
+        self._add_node_to_output(output, relationship_id)
         added.add(relationship_id)
-        self._index += 1
 
       # Links
       output["data"]["attributes"]["links"].append({
@@ -496,7 +497,10 @@ class VTGraph(object):
       response = requests.get(url, headers=self._get_headers())
       if response.status_code == 200:
         data = response.json()
-        if data.get("meta", dict()).get("total_hits", 0) == 1:
+        if (
+            data.get("meta", dict()).get("total_hits", 0) == 1 and
+            data.get("data", [{"id": node_id}])[0].get("type", "") == "file"
+        ):
           node_id = data.get("data", [{"id": node_id}])[0].get("id", node_id)
     else:
       url = "https://www.virustotal.com/api/v3/files/{node_id}".format(
@@ -588,7 +592,7 @@ class VTGraph(object):
 
     Returns:
       (list(Node), int): a list with the nodes produced by the given node
-        expansion in the given expansion type, and number with api
+        expansion in the given expansion type, and a number with api
         quotas consumed.
 
     It consumes API quota. One for each call nedeed to achieve
@@ -616,7 +620,7 @@ class VTGraph(object):
       url = "{url}?cursor={cursor}".format(url=url, cursor=cursor)
     headers = {"x-apikey": self.api_key, "x-tool": "graph-api-v1"}
 
-    # If the request fails, it will be retried at least three times.
+    # If the request fails, it will be retried as much as max_retries.
     while request_try < max_retries and not has_response:
       try:
         self._log(
@@ -759,33 +763,33 @@ class VTGraph(object):
 
         for future, expansion in futures:
 
-          nodes__, _ = future.result()
-          not_visited_nodes = (node for node in nodes__
+          nodes, _ = future.result()
+          not_visited_nodes = (node for node in nodes
                                if node not in visited_nodes)
 
-          for node_ in not_visited_nodes:
+          for not_visited_node in not_visited_nodes:
             # make deleting node achieved from target_nodes
             # thread safe
             with lock:
-              if node_ in target_nodes:
+              if not_visited_node in target_nodes:
                 path.append(
                     (
                         node.node_id,
-                        node_.node_id,
+                        not_visited_node.node_id,
                         expansion,
-                        node_.node_type
+                        not_visited_node.node_type
                     )
                 )
                 solution_paths.append(path)
-                target_nodes.remove(node_)
+                target_nodes.remove(not_visited_node)
               else:
                 expansion_nodes.append(
                     (
-                        node_,
+                        not_visited_node,
                         path + [(node.node_id,
-                                 node_.node_id,
+                                 not_visited_node.node_id,
                                  expansion,
-                                 node_.node_type)],
+                                 not_visited_node.node_type)],
                         depth + 1)
                     )
     return expansion_nodes
@@ -834,7 +838,7 @@ class VTGraph(object):
     max_api_quotas = [max_api_quotas]
     lock = threading.Lock()
     solution_paths = []
-    visited_nodes = list([node_source])
+    visited_nodes = [node_source]
     target_nodes = list(target_nodes)
 
     expand_parallel_partial_ = functools.partial(
@@ -850,7 +854,7 @@ class VTGraph(object):
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
 
       while has_quota and target_nodes and queue:
-        visited_nodes.extend([node[0] for node in queue])
+        visited_nodes.extend((node[0] for node in queue))
         futures = []
         for node_ in queue:
           futures.append(pool.submit(expand_parallel_partial_, node_))
@@ -891,7 +895,7 @@ class VTGraph(object):
       Node: the node object appended to graph.
 
     This call consumes API quota if fetch_information=True. It also consumes
-    API quota if the given node_id is not standat, for example a file with id
+    API quota if the given node_id is not standar, for example a file with id
     in SHA1 or MD5 or URL without VT identifier.
     """
     node_id = self._get_node_id(node_id)
@@ -1206,7 +1210,7 @@ class VTGraph(object):
 
     has_link = False
     for source_, target_, _ in self.links:
-      if source_ == node_source  or source_ == target_:
+      if source_ == node_source or source_ == target_:
         has_link = True
 
     if not has_link:

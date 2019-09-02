@@ -52,19 +52,19 @@ def test_save_graph_error(mocker):
 
 def test_get_link():
   """Test get VT graph link."""
-  id_ = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
-  test_graph.graph_id = id_
-  assert test_graph.get_ui_link() == "https://www.virustotal.com/graph/%s" % id_
+  graph_id = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
+  test_graph.graph_id = graph_id
+  assert test_graph.get_ui_link() == "https://www.virustotal.com/graph/%s" % graph_id
 
 
 def test_get_iframe():
   """Test get VT graph iframe."""
-  id_ = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
-  test_graph.graph_id = id_
+  graph_id = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
+  test_graph.graph_id = graph_id
   assert test_graph.get_iframe_code() == (
       "<iframe src=\"https://www.virustotal.com/graph/embed/" +
       "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
       .format(
-          graph_id=id_
+          graph_id=graph_id
       )
   )

@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 """Test expansion nodes from graph."""
 
 

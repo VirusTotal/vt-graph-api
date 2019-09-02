@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 """Test add node to graph."""
 
 

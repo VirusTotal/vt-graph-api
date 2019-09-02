@@ -1,4 +1,3 @@
-# pylint: disable=superfluous-parens
 """VTGraph basic search usage example."""
 
 from vt_graph_api import VTGraph

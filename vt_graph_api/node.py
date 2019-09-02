@@ -27,7 +27,7 @@ class Node(object):
     expansions_available ([str]): available expansions for the node.
     attributes (dict): VirusTotal attribute dict.
     label (str): node name.
-    childrens (dict): dict with the childrens for each expansion type.
+    childrens (dict): dict with the children for each expansion type.
     relationship_ids (dict): dict with the relationship id for each
       expansion type.
   """
@@ -44,6 +44,7 @@ class Node(object):
           "contacted_urls",
           "email_parents",
           "embedded_domains",
+          "embedded_urls",
           "embedded_ips",
           "execution_parents",
           "itw_domains",
@@ -110,7 +111,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to url
+        bool: whether node_id belongs to a url
     """
     return URL_RE.match(node_id)
 
@@ -122,7 +123,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to md5 hash.
+        bool: wether node_id belongs to a md5 hash.
     """
     return MD5_RE.match(node_id)
 
@@ -134,19 +135,19 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to sha1 hash.
+        bool: wether node_id belongs to a sha1 hash.
     """
     return SHA1_RE.match(node_id)
 
   @staticmethod
   def is_sha256(node_id):
-    """Check if node_id belongs to sha256 hash.
+    """Check if node_id belongs to a sha256 hash.
 
     Args:
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to sha256 hash.
+        bool: wether node_id belongs to a sha256 hash.
     """
     return SHA256_RE.match(node_id)
 
@@ -158,7 +159,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to ipv4.
+        bool: wether node_id belongs to a ipv4.
     """
     return IPV4_RE.match(node_id)
 
@@ -170,7 +171,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to domain name.
+        bool: wether node_id belongs to a domain name.
     """
     return DOMAIN_RE.match(node_id)
 
