@@ -1,7 +1,7 @@
-"""vt_graph_api.loader.
+"""vt_graph_api.load.vt_graph_id.
 
-This modules provides virustotal graph loaders through with,
-the user could load VTGraph in different ways.
+This modules provides graph loader method for
+retrieve saved graph from virustotal.
 """
 
 
@@ -12,8 +12,8 @@ from vt_graph_api.node import Node
 from vt_graph_api.version import __x_tool__
 
 
-def from_id(api_key, graph_id):
-  """Load VTGraph from the given graph_id.
+def from_vt_graph_id(api_key, graph_id):
+  """Load VTGraph using the given graph_id.
 
   Args:
     api_key (str): VT API key.
@@ -145,11 +145,3 @@ def from_id(api_key, graph_id):
     raise LoaderError("JSON wrong structure")
 
   return imported_graph
-
-
-def from_maltego_csv():
-  pass
-
-
-def from_maltego_xml():
-  pass
