@@ -9,6 +9,7 @@ import vt_graph_api.errors
 test_graph = vt_graph_api.VTGraph(
     "Dummy api key",
     verbose=False,
+    intelligence=True,
     private=False,
     name="Graph test",
     user_editors=["jinfantes"],

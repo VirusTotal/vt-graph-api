@@ -59,6 +59,7 @@ class VTGraph(object):
       api_key,
       name="",
       private=False,
+      intelligence=False,
       user_editors=None,
       user_viewers=None,
       group_editors=None,
@@ -72,6 +73,9 @@ class VTGraph(object):
       private (bool, optional): true for private graphs. You need to have
         Private Graph premium feature enabled in your subscription. Defaults
         to False.
+      intelligence (bool, optional): if True, the graph will search any 
+        available information using vt intelligence for the node if there is
+        no normal information for it. Defaults to false.
       user_editors ([str], optional): usernames that can edit the graph.
         Defaults to None.
       user_viewers ([str], optional): usernames that can view the graph.
@@ -91,6 +95,7 @@ class VTGraph(object):
     self.name = name
     self._api_calls = 0
     self.private = private
+    self.intelligence = intelligence
     self.user_editors = user_editors or []
     self.user_viewers = user_viewers or []
     self.group_editors = group_editors or []
@@ -554,7 +559,8 @@ class VTGraph(object):
     """Return the correct node_id.
 
     It only change the given node_id in case of file node with no sha256 hash
-    or url instead of VT url identifier.
+    or url instead of VT url identifier, or the given node_id belong to
+    unknown identifier.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
@@ -571,7 +577,8 @@ class VTGraph(object):
     elif (
         not Node.is_domain(node_id) and
         not Node.is_ipv4(node_id) and
-        not Node.is_sha256(node_id)
+        not Node.is_sha256(node_id) and
+        self.intelligence
     ):
       node_id = self._get_file_sha_256(node_id, True)
 
