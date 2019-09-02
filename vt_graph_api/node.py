@@ -27,7 +27,7 @@ class Node(object):
     expansions_available ([str]): available expansions for the node.
     attributes (dict): VirusTotal attribute dict.
     label (str): node name.
-    childrens (dict): dict with the children for each expansion type.
+    children (dict): dict with the children for each expansion type.
     relationship_ids (dict): dict with the relationship id for each
       expansion type.
   """
@@ -98,7 +98,7 @@ class Node(object):
     self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
     self.attributes = None
     self.label = ""
-    self.childrens = {
+    self.children = {
         expansion_type: [] for expansion_type in self.expansions_available
     }
     self.relationship_ids = {}
@@ -200,7 +200,7 @@ class Node(object):
       expansion (str): expansion for the given node_id.
     """
     if expansion in self.expansions_available:
-      self.childrens[expansion].append(node_id)
+      self.children[expansion].append(node_id)
 
   def delete_child(self, node_id, expansion):
     """Delete child from Node in the given expansion.
@@ -210,7 +210,7 @@ class Node(object):
       expansion (str): expansion for the given node_id.
     """
     if expansion in self.expansions_available:
-      self.childrens[expansion].remove(node_id)
+      self.children[expansion].remove(node_id)
 
   def reset_relationship_ids(self):
     """Reset relationship_ids."""

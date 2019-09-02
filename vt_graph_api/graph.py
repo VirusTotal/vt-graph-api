@@ -208,10 +208,9 @@ class VTGraph(object):
     url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/viewers".format(
         graph_id=self.graph_id
     )
-    headers = self._get_headers()
     response = requests.post(
         url,
-        headers=headers,
+        headers=self._get_headers(),
         data=json.dumps({"data": data})
     )
 
@@ -242,10 +241,9 @@ class VTGraph(object):
     url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/editors".format(
         graph_id=self.graph_id
     )
-    headers = self._get_headers()
     response = requests.post(
         url,
-        headers=headers,
+        headers=self._get_headers(),
         data=json.dumps({"data": data})
     )
 
@@ -261,13 +259,12 @@ class VTGraph(object):
     It consumes API quota.
     """
     data = {}
-    headers = self._get_headers()
     end_point = self._get_api_endpoint(node.node_type)
     url = "https://www.virustotal.com/api/v3/{end_point}/{node_id}".format(
         end_point=end_point,
         node_id=node.node_id
     )
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=self._get_headers())
     self._increment_api_counter()
     if response.status_code == 200:
       data = response.json()
@@ -292,8 +289,11 @@ class VTGraph(object):
         SaveGraphError: if something went bad when saving the graph.
     """
     url = "https://www.virustotal.com/api/v3/graphs"
-    headers = self._get_headers()
-    response = requests.post(url, headers=headers, data=json.dumps(output))
+    response = requests.post(
+        url,
+        headers=self._get_headers(),
+        data=json.dumps(output)
+    )
     if response.status_code == 200:
       data = response.json()
       if "data" in data:
@@ -330,11 +330,11 @@ class VTGraph(object):
     for node in nodes:
       to_minimize = []
       calculated_nodes.add(node.node_id)
-      not_visited_nodes = (
+      not_visited_node = (
           node for node in nodes
           if node.node_id not in calculated_nodes
       )
-      for node_ in not_visited_nodes:
+      for node_ in not_visited_node:
         # The interescteion between possible expansion of each node give
         # us the common expansions
         shared_expansions = (
@@ -345,12 +345,12 @@ class VTGraph(object):
         # same expansion and they have at least one child.
         minimize_expansion = (
             expansion for expansion in shared_expansions
-            if node.childrens[expansion]
+            if node.children[expansion]
         )
         for expansion in minimize_expansion:
           if (
-              collections.Counter(node.childrens[expansion]) ==
-              collections.Counter(node_.childrens[expansion])
+              collections.Counter(node.children[expansion]) ==
+              collections.Counter(node_.children[expansion])
           ):
             to_minimize.append((node_, expansion))
 
@@ -527,9 +527,12 @@ class VTGraph(object):
 
     It consumes API quota.
     """
-    headers = self._get_headers()
     url = "https://www.virustotal.com/api/v3/urls"
-    response = requests.post(url, data={"url": node_id}, headers=headers)
+    response = requests.post(
+        url,
+        data={"url": node_id},
+        headers=self._get_headers()
+    )
     if response.status_code == 200:
       data = response.json()
       node_id = data.get("data", dict()).get(
@@ -588,7 +591,7 @@ class VTGraph(object):
 
     Raises:
       MaximumConnectionRetriesError: if the maximum number of retries will be
-        achieved by the function.
+        reached by the function.
 
     Returns:
       (list(Node), int): a list with the nodes produced by the given node
@@ -618,7 +621,6 @@ class VTGraph(object):
     )
     if cursor:
       url = "{url}?cursor={cursor}".format(url=url, cursor=cursor)
-    headers = {"x-apikey": self.api_key, "x-tool": "graph-api-v1"}
 
     # If the request fails, it will be retried as much as max_retries.
     while request_try < max_retries and not has_response:
@@ -632,7 +634,7 @@ class VTGraph(object):
         )
         response = requests.get(
             url,
-            headers=headers,
+            headers=self._get_headers(),
             timeout=self.REQUEST_TIMEOUT
         )
         self._increment_api_counter()
@@ -768,7 +770,7 @@ class VTGraph(object):
                                if node not in visited_nodes)
 
           for not_visited_node in not_visited_nodes:
-            # make deleting node achieved from target_nodes
+            # make deleting node reached from target_nodes
             # thread safe
             with lock:
               if not_visited_node in target_nodes:
@@ -795,7 +797,7 @@ class VTGraph(object):
     return expansion_nodes
 
   def _search_connection(self, node_source, target_nodes,
-                         max_api_quotas, max_depth, max_ratio):
+                         max_api_quotas, max_depth, max_qps):
     """Search connection between node source and all of target_nodes.
 
                           node_source
@@ -822,14 +824,19 @@ class VTGraph(object):
       max_api_quotas (int, optional): max number of api quotas.
         Defaults to 10000.
       max_depth (int, optional): max hops between nodes. Defaults to 5.
-      max_ratio (int): max number of nodes that could be processed
-        in parallel. Max: MAX_PARALLEL_REQUESTS.
+      max_qps (int): max number of queries per second as much as
+        MAX_PARALLEL_REQUESTS.
     Returns:
       [[(str, str, str, str))]]: the computed path from node_source to
-        each node in target_nodes.
+        each node in target_nodes. The elements of the tuple are:
+          - source node id.
+          - target node id.
+          - expansion name which produces that relation.
+          - target node type.
+
     """
 
-    max_ratio = min(max_ratio, self.MAX_PARALLEL_REQUESTS)
+    max_qps = min(max_qps, self.MAX_PARALLEL_REQUESTS)
     queue = [(node_source, [], 0)]
     paths = []
     has_quota = True
@@ -851,7 +858,7 @@ class VTGraph(object):
         max_depth
     )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_ratio) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_qps) as pool:
 
       while has_quota and target_nodes and queue:
         visited_nodes.extend((node[0] for node in queue))
@@ -868,6 +875,62 @@ class VTGraph(object):
 
     paths = list(solution_paths)
     return paths
+
+  def _resolve_relations(self, node_source, target_nodes,
+                         max_api_quotas, max_depth, max_qps,
+                         fetch_info_collected_nodes):
+    """Try to connect node_source with all of the nodes in target_nodes.
+
+    Args:
+      node_source (Node): The node that will wanted to be connected.
+      target_nodes ([Node]): The nodes that will be connected with source.
+      max_api_quotas (int, optional): maximum number of api quotas that could
+        be consumed. Defaults to 100000.
+      max_depth (int, optional): maximum number of hops between the nodes.
+        Defaults to 3.
+      max_qps (int, optional): maximum number requests per second.
+        Defaults to 1000.
+      fetch_info_collected_nodes (bool, optional): if True, when a new node
+        is added to graph to compute the connection, it will be fetched
+        on VT for information. It consumes api quotas which are not included
+        in max_api_quota. Defaults to True.
+
+    Returns:
+      bool: whether at least one relation has been found.
+
+    This call consumes API quota (as much as max_api_quotas value), one for
+    each expansion required to find the relations.
+    """
+    quotas_before_get_id = self.get_api_calls()
+    quotas_after_get_id = self.get_api_calls()
+    max_api_quotas -= (quotas_after_get_id - quotas_before_get_id)
+
+    has_link = False
+    for source_, target_, _ in self.links:
+      if (source_ == node_source.node_id and
+          self.nodes[target_] in target_nodes or
+          self.nodes[source_] in target_nodes and
+          target_ == node_source.node_id):
+        has_link = True
+        break  # exit if found
+
+    if not has_link:
+      links = self._search_connection(
+          node_source,
+          target_nodes,
+          max_api_quotas,
+          max_depth,
+          max_qps
+      )
+
+      if links:
+        for links_ in links:
+          for source_id, target_id, connection_type, target_type in links_:
+            self.add_node(target_id, target_type, fetch_info_collected_nodes)
+            self.links[(source_id, target_id, connection_type)] = True
+            self.nodes[source_id].add_child(target_id, connection_type)
+        has_link = True
+    return has_link
 
   def _get_headers(self):
     """Returns the request headers."""
@@ -1080,51 +1143,46 @@ class VTGraph(object):
     self.nodes[node_source].add_child(node_target, connection_type)
 
   def add_links_if_match(self, node_source, node_target,
-                         max_api_quotas=100000, max_depth=3, max_ratio=1000,
+                         max_api_quotas=100000, max_depth=3, max_qps=1000,
                          fetch_info_collected_nodes=True):
-    """Try to find relation between node_source and node_target.
+    """Try to find relation between the node_source the and node_target.
 
     Adds the needed links between node_source and node_target if
-    node_target could be achieved by node_source.
+    node_target could be reached by node_source.
 
     Args:
       node_source (str): source node ID.
       node_target (str): target node ID.
-      max_api_quotas (int, optional): maximum number of api quotas thath could
+      max_api_quotas (int, optional): maximum number of api quotas that could
         be consumed. Defaults to 100000.
       max_depth (int, optional): maximum number of hops between the nodes.
         Defaults to 3.
-      max_ratio (int, optional): maximum number of multi-requests.
+      max_qps (int, optional): maximum number of requests per second.
         Defaults to 1000.
-      fetch_info_collected_nodes (bool, optional): if True, when new node
+      fetch_info_collected_nodes (bool, optional): if True, when a new node
         is added to graph to compute the connection, it will be fetched
-        on VT for information. It consumes api quotas which are not include
+        on VT for information. It consumes api quotas which are not included
         in max_api_quota. Defaults to True.
 
     Returns:
       bool: whether relation has been found.
 
     Raises:
-      NodeNotFound: if any node is not found.
+      NodeNotFound: if source or target node is not found.
       SameNodeError: if node_source and node_target are the same.
 
     This call consumes API quota (as much as max_api_quotas value), one for
     each expansion required to find the relation.
     """
+
     if node_source == node_target:
       raise SameNodeError(
           "it is no possible to add links between the same node; id: {node_id}"
-          .format(
-              node_id=node_source
-          )
+          .format(node_id=node_source)
       )
 
-    quotas_before_get_id = self.get_api_calls()
     node_source = self._get_node_id(node_source)
     node_target = self._get_node_id(node_target)
-    quotas_after_get_id = self.get_api_calls()
-    max_api_quotas -= (quotas_after_get_id - quotas_before_get_id)
-
     if node_source not in self.nodes:
       raise NodeNotFoundError(
           "node '{node_id}' not found in nodes"
@@ -1132,6 +1190,7 @@ class VTGraph(object):
               node_id=node_source
           )
       )
+
     if node_target not in self.nodes:
       raise NodeNotFoundError(
           "node '{node_id}' not found in nodes"
@@ -1139,55 +1198,36 @@ class VTGraph(object):
               node_id=node_target
           )
       )
-    has_link = False
-    for source_, target_, _ in self.links:
-      if ((source_ == node_source and target_ == node_target) or
-          (source_ == node_target and target_ == node_source)):
-        has_link = True
 
-    if not has_link:
-
-      node_source = self.nodes[node_source]
-      node_target = self.nodes[node_target]
-
-      links = self._search_connection(
-          node_source,
-          [node_target],
-          max_api_quotas,
-          max_depth,
-          max_ratio
-      )
-
-      if links:
-        for links_ in links:
-          for source_id, target_id, connection_type, target_type in links_:
-            self.add_node(target_id, target_type, fetch_info_collected_nodes)
-            self.links[(source_id, target_id, connection_type)] = True
-            self.nodes[source_id].add_child(target_id, connection_type)
-        has_link = True
-
-    return has_link
+    return self._resolve_relations(
+        self.nodes[node_source],
+        [self.nodes[node_target]],
+        max_api_quotas,
+        max_depth,
+        max_qps,
+        fetch_info_collected_nodes
+    )
 
   def connect_with_graph(self, node_source, max_api_quotas=100000,
-                         max_depth=3, max_ratio=1000,
+                         max_depth=3, max_qps=1000,
                          fetch_info_collected_nodes=True):
-    """Try to connect node_source with graph's nodes.
+    """Try to connect node_source with the current graph nodes.
 
     Args:
-        node_source (Node): source_node ID.
-        max_api_quotas (int, optional): maximum number of api quotas thath could
+      node_source (Node): source_node ID.
+      max_api_quotas (int, optional): maximum number of api quotas that could
         be consumed. Defaults to 100000.
       max_depth (int, optional): maximum number of hops between the nodes.
         Defaults to 3.
-      max_ratio (int, optional): maximum number of multi-requests.
+      max_qps (int, optional): maximum number requests per second.
         Defaults to 1000.
-      fetch_info_collected_nodes (bool, optional): if True, when new node
+      fetch_info_collected_nodes (bool, optional): if True, when a new node
         is added to graph to compute the connection, it will be fetched
-        on VT for information. It consumes api quotas which are not include
+        on VT for information. It consumes api quotas which are not included
         in max_api_quota. Defaults to True.
 
     Raises:
-      NodeNotFound: if any node is not found.
+      NodeNotFound: if node source is not found.
 
     Returns:
       bool: whether at least one relation has been found.
@@ -1195,11 +1235,7 @@ class VTGraph(object):
     This call consumes API quota (as much as max_api_quotas value), one for
     each expansion required to find the relations.
     """
-
-    quotas_before_get_id = self.get_api_calls()
     node_source = self._get_node_id(node_source)
-    quotas_after_get_id = self.get_api_calls()
-    max_api_quotas -= (quotas_after_get_id - quotas_before_get_id)
     if node_source not in self.nodes:
       raise NodeNotFoundError(
           "node '{node_id}' not found in nodes"
@@ -1208,34 +1244,18 @@ class VTGraph(object):
           )
       )
 
-    has_link = False
-    for source_, target_, _ in self.links:
-      if source_ == node_source or source_ == target_:
-        has_link = True
+    node_source = self.nodes[node_source]
+    target_nodes = list(self.nodes.values())
+    target_nodes.remove(node_source)
 
-    if not has_link:
-
-      node_source = self.nodes[node_source]
-      target_nodes = list(self.nodes.values())
-      target_nodes.remove(node_source)
-
-      links = self._search_connection(
-          node_source,
-          target_nodes,
-          max_api_quotas,
-          max_depth,
-          max_ratio
-      )
-
-      if links:
-        for links_ in links:
-          for source_id, target_id, connection_type, target_type in links_:
-            self.add_node(target_id, target_type, fetch_info_collected_nodes)
-            self.links[(source_id, target_id, connection_type)] = True
-            self.nodes[source_id].add_child(target_id, connection_type)
-        has_link = True
-
-    return has_link
+    return self._resolve_relations(
+        node_source,
+        target_nodes,
+        max_api_quotas,
+        max_depth,
+        max_qps,
+        fetch_info_collected_nodes
+    )
 
   def delete_node(self, node_id):
     """Deletes a node from the graph.
