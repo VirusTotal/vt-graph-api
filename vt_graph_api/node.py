@@ -217,7 +217,7 @@ class Node(object):
     self.relationship_ids.clear()
 
   def __str__(self):
-    return "%s: %s" % (self.node_id, self.attributes)
+    return "%s" % (self.node_id)
 
   def __repr__(self):
     return str(self)

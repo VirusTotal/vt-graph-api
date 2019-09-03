@@ -1,6 +1,7 @@
 """Test search VTGraph methods."""
 
 
+from unittest.mock import call
 import vt_graph_api
 
 
@@ -533,10 +534,37 @@ def test_search_connection_second_level_real_data(mocker):
   )
   total_nodes_first_level = total_file_expansions
   assert test_graph._search_connection(node_a, [node_b], 19, 5, 100)
-  assert test_graph._get_expansion_nodes.call_count <= (
-      total_file_expansions +
-      total_file_expansions * total_nodes_first_level +
-      289  # max expansions in second level
+  # check that _get_expansion_nodes was called with correct arguments.
+  # The first node is espanded 17 times.
+  calls = [
+      call(node_a, "bundled_files", 40),
+      call(node_a, "carbonblack_children", 40),
+      call(node_a, "carbonblack_parents", 40),
+      call(node_a, "compressed_parents", 40),
+      call(node_a, "contacted_domains", 40),
+      call(node_a, "contacted_ips", 40),
+      call(node_a, "contacted_urls", 40),
+      call(node_a, "email_parents", 40),
+      call(node_a, "embedded_domains", 40),
+      call(node_a, "embedded_urls", 40),
+      call(node_a, "embedded_ips", 40),
+      call(node_a, "execution_parents", 40),
+      call(node_a, "itw_domains", 40),
+      call(node_a, "itw_urls", 40),
+      call(node_a, "overlay_parents", 40),
+      call(node_a, "pcap_parents", 40),
+      call(node_a, "pe_resource_parents", 40),
+      call(node_a, "similar_files", 40),
+      call(vt_graph_api.Node(
+          "bde526ed27ce0630401ad24794014b68e32de413d" +
+          "e6bc7f37319e4cc4afa283d", "file"),
+          "bundled_files", 40)
+  ]
+  test_graph._get_expansion_nodes.assert_has_calls(calls)
+  # The target node is reached during the
+  # bde526ed27ce0630401ad24794014b68e32de413de6bc7f37319e4cc4afa283d expansion
+  assert test_graph._get_expansion_nodes.call_count == (
+      len(node_a.expansions_available) + 1
   )
   assert test_graph._parallel_expansion.call_count <= (
       1 +
