@@ -1274,7 +1274,6 @@ class VTGraph(object):
           )
       )
 
-    del self.nodes[node_id]
     to_be_deleted = []
     for link in self.links:
       source, target, _ = link
@@ -1283,6 +1282,7 @@ class VTGraph(object):
     for node_source, node_target, connection_type in to_be_deleted:
       del self.links[(node_source, node_target, connection_type)]
       self.nodes[node_source].delete_child(node_target, connection_type)
+    del self.nodes[node_id]
 
   def get_ui_link(self):
     """Requires that save_graph was called."""
