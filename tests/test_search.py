@@ -2,15 +2,16 @@
 
 
 import pytest
+import vt_graph_api
+
 try:
   from unittest.mock import call
   from unittest.mock import Mock
-  from urllib.parse import urlparse
+  import urllib.parse as urlparse
 except ImportError:
   from mock import call
   from mock import Mock
-  from urlparse import urlparse
-import vt_graph_api
+  import urlparse
 
 
 test_graph = vt_graph_api.VTGraph(
@@ -535,20 +536,21 @@ EXPANSION_SIDE_EFFECTS = {
     }
 }
 
+
 def mock_request(url, *args, **kwargs):
   """Mock for method request.get()."""
-  url = urlparse(url)
+  url = urlparse.urlparse(url)
   node_id, expansion = url.path.split("/")[-2:]
   if not node_id in EXPANSION_NODES or expansion in EXPANSION_NODES[node_id]:
     pytest.xfail("This call have never been invoked")
   EXPANSION_NODES[node_id].append(expansion)
   return Mock(
-      status_code=200, 
+      status_code=200,
       json=Mock(
           return_value=EXPANSION_SIDE_EFFECTS[node_id][expansion]
       )
   )
-    
+
 
 def test_search_connection_second_level_real_data(mocker):
   """Test search connection end to end."""
@@ -589,10 +591,15 @@ def test_search_connection_second_level_real_data(mocker):
       call(node_a, "pcap_parents", 40),
       call(node_a, "pe_resource_parents", 40),
       call(node_a, "similar_files", 40),
-      call(vt_graph_api.Node(
-          "bde526ed27ce0630401ad24794014b68e32de413d" +
-          "e6bc7f37319e4cc4afa283d", "file"),
-          "bundled_files", 40)
+      call(
+          vt_graph_api.Node
+          (
+              "bde526ed27ce0630401ad24794014b68e32de413d" +
+              "e6bc7f37319e4cc4afa283d",
+              "file"
+          ),
+          "bundled_files", 40
+      )
   ]
   test_graph._get_expansion_nodes.assert_has_calls(calls)
   # The target node is reached during the
