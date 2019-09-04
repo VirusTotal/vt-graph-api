@@ -719,7 +719,7 @@ def test_search_connection_second_level_real_data(mocker):
          +-----------+----+      +-----+-----+         |      +-------------+
          |           |    |      |           |         |      |      |      |
          v           v    v      v           v         v      v      v      v
-  INTERMEDIATE_NODE  ...  ...    ...         ...       ...    ...    ...    ...
+  INTERMEDIATE_NODE ...  ...    ...         ...       ...    ...    ...    ...
          +
    +-----+---------------------+
    |             |             |
