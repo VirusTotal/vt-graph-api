@@ -25,6 +25,12 @@ def test_save_graph(mocker):
   }
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.post", return_value=m)
+  mocker.patch.object(test_graph, "_fetch_information")
+  added_node_id_a = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  added_node_id_b = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
+  test_graph.add_node(added_node_id_a, "file", label="Investigation node")
+  test_graph.add_node(added_node_id_b, "file", label="Investigation node 2")
+  test_graph.add_link(added_node_id_a, added_node_id_b, "similar_files")
   mocker.patch.object(test_graph, "_add_editors")
   mocker.patch.object(test_graph, "_add_viewers")
   test_graph.save_graph()
@@ -52,19 +58,19 @@ def test_save_graph_error(mocker):
 
 def test_get_link():
   """Test get VT graph link."""
-  id_ = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
-  test_graph.graph_id = id_
-  assert test_graph.get_ui_link() == "https://www.virustotal.com/graph/%s" % id_
+  graph_id = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
+  test_graph.graph_id = graph_id
+  assert test_graph.get_ui_link() == "https://www.virustotal.com/graph/%s" % graph_id
 
 
 def test_get_iframe():
   """Test get VT graph iframe."""
-  id_ = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
-  test_graph.graph_id = id_
+  graph_id = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
+  test_graph.graph_id = graph_id
   assert test_graph.get_iframe_code() == (
       "<iframe src=\"https://www.virustotal.com/graph/embed/" +
       "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
       .format(
-          graph_id=id_
+          graph_id=graph_id
       )
   )

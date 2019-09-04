@@ -29,7 +29,7 @@ class Node(object):
     expansions_available ([str]): available expansions for the node.
     attributes (dict): VirusTotal attribute dict.
     label (str): node name.
-    childrens (dict): dict with the childrens for each expansion type.
+    children (dict): dict with the children for each expansion type.
     relationship_ids (dict): dict with the relationship id for each
       expansion type.
   """
@@ -46,6 +46,7 @@ class Node(object):
           "contacted_urls",
           "email_parents",
           "embedded_domains",
+          "embedded_urls",
           "embedded_ips",
           "execution_parents",
           "itw_domains",
@@ -103,7 +104,7 @@ class Node(object):
     self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
     self.attributes = None
     self.label = ""
-    self.childrens = {
+    self.children = {
         expansion_type: [] for expansion_type in self.expansions_available
     }
     self.relationship_ids = {}
@@ -116,7 +117,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to url
+        bool: whether node_id belongs to a url
     """
     return URL_RE.match(node_id)
 
@@ -128,7 +129,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to md5 hash.
+        bool: wether node_id belongs to a md5 hash.
     """
     return MD5_RE.match(node_id)
 
@@ -140,19 +141,19 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to sha1 hash.
+        bool: wether node_id belongs to a sha1 hash.
     """
     return SHA1_RE.match(node_id)
 
   @staticmethod
   def is_sha256(node_id):
-    """Check if node_id belongs to sha256 hash.
+    """Check if node_id belongs to a sha256 hash.
 
     Args:
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to sha256 hash.
+        bool: wether node_id belongs to a sha256 hash.
     """
     return SHA256_RE.match(node_id)
 
@@ -164,7 +165,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to ipv4.
+        bool: wether node_id belongs to a ipv4.
     """
     return IPV4_RE.match(node_id)
 
@@ -176,7 +177,7 @@ class Node(object):
         node_id (str): node ID.
 
     Returns:
-        bool: wether node_id belongs to domain name.
+        bool: wether node_id belongs to a domain name.
     """
     return DOMAIN_RE.match(node_id)
 
@@ -205,7 +206,7 @@ class Node(object):
       expansion (str): expansion for the given node_id.
     """
     if expansion in self.expansions_available:
-      self.childrens[expansion].append(node_id)
+      self.children[expansion].append(node_id)
 
   def delete_child(self, node_id, expansion):
     """Delete child from Node in the given expansion.
@@ -215,20 +216,23 @@ class Node(object):
       expansion (str): expansion for the given node_id.
     """
     if expansion in self.expansions_available:
-      self.childrens[expansion].remove(node_id)
+      self.children[expansion].remove(node_id)
 
   def reset_relationship_ids(self):
     """Reset relationship_ids."""
     self.relationship_ids.clear()
 
   def __str__(self):
-    return "%s: %s" % (self.node_id, self.attributes)
+    return "%s" % (self.node_id)
 
   def __repr__(self):
     return str(self)
 
   def __eq__(self, other):
     return isinstance(other, Node) and self.node_id == other.node_id
+
+  def __hash__(self):
+    return hash(self.node_id)
 
   @staticmethod
   def get_id(node_id):
