@@ -225,6 +225,9 @@ class Node(object):
   def __eq__(self, other):
     return isinstance(other, Node) and self.node_id == other.node_id
 
+  def __hash__(self):
+    return hash(self.node_id)
+
   @staticmethod
   def get_id(node_id):
     """Return the given node_id without dots.

@@ -696,7 +696,7 @@ class VTGraph(object):
     return expansion_nodes, consumed_quotas
 
   def _parallel_expansion(self, target_nodes, solution_paths, visited_nodes,
-                          max_api_quotas, lock, max_depth, item):
+                          max_api_quotas, lock, max_depth, node, params):
     """Parallelize node expansion synchronizing api quotas consumed.
 
     Args:
@@ -711,8 +711,8 @@ class VTGraph(object):
       max_api_quotas ([int]): synchronized list with max api quotas value.
       lock (threading.Lock): lock.
       max_depth (int): max depth.
-      item (Node, list, int): structure with the node, path to
-        node and actual node depth.
+      node (Node): the node which will be expanded.
+      params (list, int): path to node and depth.
 
     Returns:
       list(tuple(Node, list, int)): list with the result of the expansions.
@@ -723,12 +723,10 @@ class VTGraph(object):
           which started the search.
     """
 
-    node = item[0]
-    path = item[1]
-    depth = item[2]
+    path, depth = params
 
     futures = []
-    expansion_nodes = []
+    expansion_nodes = {}
     expansions = node.expansions_available
 
     with concurrent.futures.ThreadPoolExecutor(
@@ -785,15 +783,15 @@ class VTGraph(object):
                 solution_paths.append(path)
                 target_nodes.remove(not_visited_node)
               else:
-                expansion_nodes.append(
+                expansion_nodes[not_visited_node] = (
                     (
-                        not_visited_node,
                         path + [(node.node_id,
                                  not_visited_node.node_id,
                                  expansion,
                                  not_visited_node.node_type)],
-                        depth + 1)
+                        depth + 1
                     )
+                )
     return expansion_nodes
 
   def _search_connection(self, node_source, target_nodes,
@@ -837,10 +835,9 @@ class VTGraph(object):
     """
 
     max_qps = min(max_qps, self.MAX_PARALLEL_REQUESTS)
-    queue = [(node_source, [], 0)]
+    queue = {node_source: ([], 0)}
     paths = []
     has_quota = True
-
     # shared variables
     max_api_quotas = [max_api_quotas]
     lock = threading.Lock()
@@ -861,13 +858,13 @@ class VTGraph(object):
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_qps) as pool:
 
       while has_quota and target_nodes and queue:
-        visited_nodes.extend((node[0] for node in queue))
+        visited_nodes.extend(six.iterkeys(queue))
         futures = []
-        for node_ in queue:
-          futures.append(pool.submit(expand_parallel_partial_, node_))
-        queue = []
+        for node, params in six.iteritems(queue):
+          futures.append(pool.submit(expand_parallel_partial_, node, params))
+        queue.clear()
         for future in futures:
-          queue.extend(future.result())
+          queue.update(future.result())
         with lock:
           quotas_left = max_api_quotas.pop()
           has_quota = quotas_left > 0
