@@ -859,6 +859,7 @@ class VTGraph(object):
         futures = []
         for node, params in six.iteritems(queue):
           futures.append(pool.submit(expand_parallel_partial_, node, params))
+        queue.clear()
         for future in futures:
           queue.update(future.result())
       with lock:
