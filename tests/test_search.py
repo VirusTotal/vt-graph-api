@@ -745,13 +745,11 @@ def test_search_connection_second_level_real_data(mocker):
   mocker.patch("requests.get", mock_request)
   mocker.spy(test_graph, "_get_expansion_nodes")
   mocker.spy(test_graph, "_parallel_expansion")
-  total_file_expansions = len(
+  total_nodes_first_level = len(
       node_a.expansions_available
   )
-  total_nodes_first_level = total_file_expansions
   assert test_graph._search_connection(node_a, [node_b], 1000, 5, 100)
-  # check that _get_expansion_nodes was called with the correct arguments.
-  # The first node is expanded 17 times.
+  # Check that _get_expansion_nodes was called with the correct arguments.
   calls = [
       call(node_a, "bundled_files", 40),
       call(node_a, "carbonblack_children", 40),
@@ -794,7 +792,9 @@ def test_search_connection_second_level_real_data(mocker):
   total_expansion_calls = 0
   for node_type in six.itervalues(EXPANSION_NODES):
     total_expansion_calls += len(vt_graph_api.Node.NODE_EXPANSIONS[node_type])
-  assert test_graph._get_expansion_nodes.call_count == total_expansion_calls
+  # all assertions are less than instead of equal because of the difficult of
+  # stopping threads when solution is found.
+  assert test_graph._get_expansion_nodes.call_count <= total_expansion_calls
   assert test_graph._parallel_expansion.call_count <= (
       1 +
       total_nodes_first_level +
