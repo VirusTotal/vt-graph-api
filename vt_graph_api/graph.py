@@ -659,12 +659,11 @@ class VTGraph(object):
     has_more = data.get("meta", {})
 
     # Some results return just one element back.
-    if "data" not in data:
+    new_nodes = data.get("data", list())
+    if isinstance(new_nodes, dict):
+      new_nodes = [new_nodes]
+    elif new_nodes is None:
       new_nodes = []
-    elif isinstance(data["data"], dict):
-      new_nodes = [data["data"]]
-    else:
-      new_nodes = data["data"]
 
     for node_data in new_nodes:
       child_node_id = node_data["id"]
@@ -854,20 +853,18 @@ class VTGraph(object):
         max_depth
     )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_qps) as pool:
-
-      while has_quota and target_nodes and queue:
+    while has_quota and target_nodes and queue:
+      with concurrent.futures.ThreadPoolExecutor(max_workers=max_qps) as pool:
         visited_nodes.extend(six.iterkeys(queue))
         futures = []
         for node, params in six.iteritems(queue):
           futures.append(pool.submit(expand_parallel_partial_, node, params))
-        queue.clear()
         for future in futures:
           queue.update(future.result())
-        with lock:
-          quotas_left = max_api_quotas.pop()
-          has_quota = quotas_left > 0
-          max_api_quotas.append(quotas_left)
+      with lock:
+        quotas_left = max_api_quotas.pop()
+        has_quota = quotas_left > 0
+        max_api_quotas.append(quotas_left)
 
     paths = list(solution_paths)
     return paths
