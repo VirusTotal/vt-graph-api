@@ -1,7 +1,7 @@
 
 """vt_graph_api.node.
 
-this module provides the Python object wrapper for
+This module provides the Python object wrapper for
 VTGraph node representation.
 """
 

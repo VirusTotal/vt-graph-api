@@ -357,7 +357,7 @@ class VTGraph(object):
       # Once the possible minimizations are computed, it is time to
       # generate the relationship id and set it to the minimized nodes.
       for node_to_minimize, expansion in to_minimize:
-        # if no one have relationship id yet, it will be create and added,
+        # If no one have relationship id yet, it will be create and added,
         # otherwise the relationship id will be getted from the one which
         # has it.
         if (not node.relationship_ids.get(expansion) and
@@ -620,7 +620,7 @@ class VTGraph(object):
         )
     )
     if cursor:
-      url = "{url}?cursor={cursor}".format(url=url, cursor=cursor)
+      url = "{url}&cursor={cursor}".format(url=url, cursor=cursor)
 
     # If the request fails, it will be retried as much as max_retries.
     while request_try < max_retries and not has_response:
@@ -737,7 +737,7 @@ class VTGraph(object):
 
       if depth + 1 < max_depth:
         for expansion in expansions:
-          # make get api quota thread safe
+          # Make this part thread safe.
           with lock:
             quotas_left = max_api_quotas.pop()
             quotas_left -= 1
@@ -768,8 +768,7 @@ class VTGraph(object):
                                if node not in visited_nodes)
 
           for not_visited_node in not_visited_nodes:
-            # make deleting node reached from target_nodes
-            # thread safe
+            # Make this part thread safe.
             with lock:
               if not_visited_node in target_nodes:
                 path.append(
@@ -838,7 +837,7 @@ class VTGraph(object):
     queue = {node_source: ([], 0)}
     paths = []
     has_quota = True
-    # shared variables
+    # Shared variables
     max_api_quotas = [max_api_quotas]
     lock = threading.Lock()
     solution_paths = []
@@ -909,7 +908,7 @@ class VTGraph(object):
           self.nodes[source_] in target_nodes and
           target_ == node_source.node_id):
         has_link = True
-        break  # exit if found
+        break  # Exit if found
 
     if not has_link:
       links = self._search_connection(
