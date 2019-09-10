@@ -1,4 +1,3 @@
-
 """vt_graph_api.node.
 
 This module provides the Python object wrapper for

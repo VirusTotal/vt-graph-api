@@ -1,4 +1,3 @@
-# pylint: disable=superfluous-parens
 """Advanced VTGraph usage example."""
 
 
