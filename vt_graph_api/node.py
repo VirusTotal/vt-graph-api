@@ -1,0 +1,240 @@
+"""vt_graph_api.node.
+
+This module provides the Python object wrapper for
+VTGraph node representation.
+"""
+
+
+import re
+from vt_graph_api.errors import NodeNotSupportedTypeError
+
+
+URL_RE = re.compile(r"https?://", re.IGNORECASE)
+SHA1_RE = re.compile(r"^[0-9a-fA-F]{40}$")
+MD5_RE = re.compile(r"^[0-9a-fA-F]{32}$")
+SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+IPV4_RE = re.compile(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$")
+DOMAIN_RE = re.compile(r"^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$")
+
+
+class Node(object):
+  """Python object wraper for a the VT Graph Node representation.
+
+  Attributes:
+    node_id (str): node identifier.
+    node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES.
+    expansions_available ([str]): available expansions for the node.
+    attributes (dict): VirusTotal attribute dict.
+    label (str): node name.
+    children (dict): dict with the children for each expansion type.
+    relationship_ids (dict): dict with the relationship id for each
+      expansion type.
+  """
+
+  SUPPORTED_NODE_TYPES = ("file", "url", "domain", "ip_address")
+  NODE_EXPANSIONS = {
+      "file": [
+          "bundled_files",
+          "carbonblack_children",
+          "carbonblack_parents",
+          "compressed_parents",
+          "contacted_domains",
+          "contacted_ips",
+          "contacted_urls",
+          "email_parents",
+          "embedded_domains",
+          "embedded_urls",
+          "embedded_ips",
+          "execution_parents",
+          "itw_domains",
+          "itw_urls",
+          "overlay_parents",
+          "pcap_parents",
+          "pe_resource_parents",
+          "similar_files",
+      ],
+      "url": [
+          "contacted_domains",
+          "contacted_ips",
+          "downloaded_files",
+          "last_serving_ip_address",
+          "network_location",
+          "redirecting_urls",
+      ],
+      "domain": [
+          "communicating_files",
+          "downloaded_files",
+          "referrer_files",
+          "resolutions",
+          "siblings",
+          "subdomains",
+          "urls",
+      ],
+      "ip_address": [
+          "communicating_files",
+          "downloaded_files",
+          "referrer_files",
+          "resolutions",
+          "urls",
+      ],
+  }
+
+  def __init__(self, node_id, node_type):
+    """Creates an instance of a graph object.
+
+    Args:
+      node_id (str): node identifier.
+      node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES
+
+    Raises:
+      NodeNotSupportedTypeError: if node_type not in SUPPORTED_NODE_TYPES
+    """
+    if node_type not in self.SUPPORTED_NODE_TYPES:
+      raise NodeNotSupportedTypeError("Node type: %s not supported" % node_type)
+    self.node_id = node_id
+    self.node_type = node_type
+
+    self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
+    self.attributes = None
+    self.label = ""
+    self.children = {
+        expansion_type: [] for expansion_type in self.expansions_available
+    }
+    self.relationship_ids = {}
+
+  @staticmethod
+  def is_url(node_id):
+    """Check if node_id belongs to url.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: whether node_id belongs to a url
+    """
+    return URL_RE.match(node_id)
+
+  @staticmethod
+  def is_md5(node_id):
+    """Check if node_id belongs to md5 hash.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to a md5 hash.
+    """
+    return MD5_RE.match(node_id)
+
+  @staticmethod
+  def is_sha1(node_id):
+    """Check if node_id belongs to sha1 hash.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to a sha1 hash.
+    """
+    return SHA1_RE.match(node_id)
+
+  @staticmethod
+  def is_sha256(node_id):
+    """Check if node_id belongs to a sha256 hash.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to a sha256 hash.
+    """
+    return SHA256_RE.match(node_id)
+
+  @staticmethod
+  def is_ipv4(node_id):
+    """Check if node_id belongs to ipv4.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to a ipv4.
+    """
+    return IPV4_RE.match(node_id)
+
+  @staticmethod
+  def is_domain(node_id):
+    """Check if node_id belongs to domain name.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wether node_id belongs to a domain name.
+    """
+    return DOMAIN_RE.match(node_id)
+
+  def add_attributes(self, attributes):
+    """Adds the attributes if the node doesn't have it yet.
+
+    Args:
+      attributes (dict): VirusTotal attribute dict.
+    """
+    if not self.attributes:
+      self.attributes = attributes
+
+  def add_label(self, label):
+    """Adds a label to the node.
+
+    Args:
+      label (str): value of the label.
+    """
+    self.label = label
+
+  def add_child(self, node_id, expansion):
+    """Add child to Node in the given expansion.
+
+    Args:
+      node_id (str): child node id.
+      expansion (str): expansion for the given node_id.
+    """
+    if expansion in self.expansions_available:
+      self.children[expansion].append(node_id)
+
+  def delete_child(self, node_id, expansion):
+    """Delete child from Node in the given expansion.
+
+    Args:
+      node_id (str): child node id.
+      expansion (str): expansion for the given node_id.
+    """
+    if expansion in self.expansions_available:
+      self.children[expansion].remove(node_id)
+
+  def reset_relationship_ids(self):
+    """Reset relationship_ids."""
+    self.relationship_ids.clear()
+
+  def __str__(self):
+    return "%s" % (self.node_id)
+
+  def __repr__(self):
+    return str(self)
+
+  def __eq__(self, other):
+    return isinstance(other, Node) and self.node_id == other.node_id
+
+  def __hash__(self):
+    return hash(self.node_id)
+
+  @staticmethod
+  def get_id(node_id):
+    """Return the given node_id without dots.
+
+    Args:
+        node_id (Node): node ID.
+
+    Returns:
+        str: the given node_id without dots.
+    """
+    return node_id.replace(".", "")
