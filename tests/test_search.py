@@ -709,7 +709,7 @@ def mock_request(url, headers, timeout):
 
 def test_search_connection_second_level_real_data(mocker):
   """Test search connection end to end.
-    
+
                      +-----------------+SOURCE_NODE+-----------------+
                      |                       +                       |
                      |                 +-----+---------+             |
