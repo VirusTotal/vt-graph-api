@@ -893,7 +893,6 @@ class VTGraph(object):
     paths = list(solution_paths)
     return paths
 
-
   def _resolve_relations(self, node_source, target_nodes,
                          max_api_quotas, max_depth, max_qps,
                          fetch_info_collected_nodes):
