@@ -21,7 +21,8 @@ def test_add_node_file_sha256(mocker):
   """Test add node file sha256."""
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value={}))
   mocker.patch("requests.get", return_value=m)
-  added_node_id = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  added_node_id = ("ed01ebfbc9eb5bbea545af4d01bf5f107166" +
+                   "1840480439c6e5babe8e080e41aa")
   added_node = test_graph.add_node(
       added_node_id, "file",
       label="Investigation node"
@@ -40,7 +41,8 @@ def test_add_node_file_sha1(mocker):
       "data": {
           "attributes": {
               "sha256":
-                  "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+                  "ed01ebfbc9eb5bbea545af4d01bf5f1071661" +
+                  "840480439c6e5babe8e080e41aa"
           }
       }
   }
@@ -63,7 +65,8 @@ def test_add_node_file_md5(mocker):
       "data": {
           "attributes": {
               "sha256":
-                  "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+                  "ed01ebfbc9eb5bbea545af4d01bf5f1071661" +
+                  "840480439c6e5babe8e080e41aa"
           }
       }
   }
@@ -85,7 +88,8 @@ def test_add_node_url(mocker):
   request_data = {
       "data": {
           "id":
-              "u-afb80d6e2f84fbe2248ad781ade97a8a0479ee691d523142d44f102b2c9753c1-1566543875",
+              "u-afb80d6e2f84fbe2248ad781ade97a8a0479ee6" +
+              "91d523142d44f102b2c9753c1-1566543875",
           "type": "analysis"
       }
   }

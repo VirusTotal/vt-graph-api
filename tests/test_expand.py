@@ -137,7 +137,9 @@ def test_expansion_existing_node(mocker):
   }
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=first_level))
   mocker.patch("requests.get", return_value=m)
-  added_node_id = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  added_node_id = (
+      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  )
   added_node = test_graph.add_node(added_node_id, "file",
                                    label="Investigation node")
   expansion_node = vt_graph_api.Node(
@@ -163,7 +165,9 @@ def test_expand_not_existing_node():
 def test_not_supported_expansion(mocker):
   """Test not suported expansion type."""
   mocker.patch.object(test_graph, "_fetch_information")
-  added_node_id = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  added_node_id = (
+      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  )
   test_graph.add_node(added_node_id, "file",
                       label="Investigation node")
   expansion = "dummy expansion"
@@ -177,7 +181,9 @@ def test_not_supported_expansion(mocker):
 def test_expand_one_level_existing_node(mocker):
   """Test expand one level for existing node."""
   mocker.patch.object(test_graph, "_fetch_information")
-  added_node_id = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  added_node_id = (
+      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  )
   added_node = test_graph.add_node(added_node_id, "file",
                                    label="Investigation node")
   mocker.patch.object(test_graph, "expand")
