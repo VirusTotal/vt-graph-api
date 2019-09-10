@@ -5,5 +5,5 @@ maltego graph in xml format.
 """
 
 
-def from_maltego_xml():
+def from_maltego_graphml(filename):
   pass
