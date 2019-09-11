@@ -27,21 +27,21 @@ MALTEGO_TYPES_REFERENCE = {
 
 MALTEGO_EDGE_REFERENCE = {
     "maltego.DNSName": {
-        "To DNS Name [Enumerate hostname numerically]": "subdomain",
-        "To Domains [DNS]": "subdomain",
+        "To DNS Name [Enumerate hostname numerically]": "subdomains",
+        "To Domains [DNS]": "subdomains",
         "To IP Address [DNS]": "resolutions",
-        "To Web site [Query ports]": "subdomain"
+        "To Web site [Query ports]": "subdomains"
     },
     "maltego.Domain": {
-        "To DNS Name (interesting) [Robtex]": "subdomain",
-        "To DNS Name - MX (mail server)": "subdomain",
-        "To DNS Name - NS (name server)": "subdomain",
+        "To DNS Name (interesting) [Robtex]": "subdomains",
+        "To DNS Name - MX (mail server)": "subdomains",
+        "To DNS Name - NS (name server)": "subdomains",
         "To DNS Name - SOA (Start of Authority)": "manual",
-        "To DNS Name [Attempt zone transfer]": "subdomain",
-        "To DNS Name [Find common DNS names]": "subdomain",
-        "To DNS Name [Robtex]": "subdomain",
-        "To DNS Name [Using Name Schema dictionary]": "subdomain",
-        "To Domains [DNS]": "subdomain",
+        "To DNS Name [Attempt zone transfer]": "subdomains",
+        "To DNS Name [Find common DNS names]": "subdomains",
+        "To DNS Name [Robtex]": "subdomains",
+        "To DNS Name [Using Name Schema dictionary]": "subdomains",
+        "To Domains [DNS]": "subdomains",
         "To Files (Interesting) [using Search Engine]": "communicating_files",
         "To Files (Office) [using Search Engine]": "referrer_files",
         "To Website [Quick lookup]": "siblings",
@@ -50,7 +50,7 @@ MALTEGO_EDGE_REFERENCE = {
         "[Threat Miner] Domain to IP (pDNS)": "resolutions",
         "[Threat Miner] Domain to URI": "urls",
         "[VTPUB] Detected URLs": "urls",
-        "[VTPUB] Domain Resolutions": "ip_address",
+        "[VTPUB] Domain Resolutions": "resolutions",
         "[VTPUB] Downloaded Samples": "downloaded_files",
         "[VTPUB] Get Domain Siblings": "siblings",
         "[VTPUB] Get Subdomains": "subdomains",
@@ -62,10 +62,10 @@ MALTEGO_EDGE_REFERENCE = {
         "To Domain [Dataprovider]": "resolutions",
         "To Domain [Sharing this MX]": "resolutions",
         "To Domain [Sharing this NS]": "resolutions",
-        "To Netblock [Blocks delegated to this IP as NS]": "Netblock",
-        "To Netblock [Using natural boundaries]k": "Netblock",
-        "To Netblock [Using routing info]": "Netblock",
-        "To Netblock [Using whois info]": "Netblock",
+        "To Netblock [Blocks delegated to this IP as NS]": "resolutions",
+        "To Netblock [Using natural boundaries]k": "resolutions",
+        "To Netblock [Using routing info]": "resolutions",
+        "To Netblock [Using whois info]": "resolutions",
         "To Website [Dataprovider.com]": "resolutions",
         "To Website mentioning IP [Bing]": "resolutions",
         "To Website using IP: [Bing]": "resolutions",
@@ -80,29 +80,29 @@ MALTEGO_EDGE_REFERENCE = {
         "[VTPUB] String References": "referrer_files",
     },
     "maltego.MXRecord": {
-        "To Domains [Sharing this MX]": "subdomain",
+        "To Domains [Sharing this MX]": "subdomains",
     },
     "maltego.NSRecord": {
-        "To Domains [Sharing this NS]": "subdomain",
+        "To Domains [Sharing this NS]": "subdomains",
         "To Netblock [Blocks delegated to this NS]": "resolutions"
     },
     "maltego.Netblock": {
         "To DNS Names in netblock [Reverse DNS]": "resolutions",
-        "To IP addresses [Found in Netblock]": "",
+        "To IP addresses [Found in Netblock]": "resolutions",
         "To Netblocks [Cuts Netblock into smaller ones]": "",
-        "To Wikipedia Edits": "urls",
+        "To Wikipedia Edits": "resolutions",
         "[DNSDB] To DNSNames with this value": "resolutions"
     },
     "maltego.Website": {
         "Mirror: External links found": "urls",
-        "To Domain [Dataprovider.com]": "subdomain",
+        "To Domain [Dataprovider.com]": "subdomains",
         "To IP [Dataprovider.com]": "resolutions",
         "To IP's (reverse) [Dataprovider.com]": "resolutions",
         "To Incoming Links [Dataprovider.com]": "urls",
         "To Similar HTML [Dataprovider.com]": "siblings",
         "To Subdomains [Dataprovider.com]": "subdomains",
         "To URLs [show Search Engine results]": "urls",
-        "To Website [Replace with thumbnail]": "subdomain"
+        "To Website [Replace with thumbnail]": "subdomains"
     },
     "maltego.URL": {
         "To Images [Found on webpage]": "contacted_domains",
