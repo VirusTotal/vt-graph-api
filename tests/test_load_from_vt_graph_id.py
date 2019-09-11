@@ -1,211 +1,22 @@
 """Test load graph from VT."""
 
 
+import json
+import os
 import pytest
 import vt_graph_api.errors
-import vt_graph_api.load
+import vt_graph_api.load.virustotal
 
 
-GRAPH_RESPONSE_DATA = {
-    "data": {
-        "attributes": {
-            "comments_count": 0,
-            "creation_date": 1567094335,
-            "graph_data": {
-                "description": "First Graph API test",
-                "version": "api-1.0.0"
-            },
-            "last_modified_date": 1567094335,
-            "links": [
-                {
-                    "connection_type": "contacted_ips",
-                    "source":
-                        "5504e04083d6146a67cb0d671d8ad5885315062c9ee" +
-                        "08a62e40e264c2d5eab91",
-                    "target":
-                        "relationships_contacted_ips_5504e04083d6146" +
-                        "a67cb0d671d8ad5885315062c9ee08a62e40e264c2d" +
-                        "5eab91"
-                },
-                {
-                    "connection_type": "contacted_ips",
-                    "source":
-                        "efa0b414a831cbf724d1c67808b7483dec22a981ae6" +
-                        "70947793d114048f88057",
-                    "target":
-                        "relationships_contacted_ips_5504e04083d6146" +
-                        "a67cb0d671d8ad5885315062c9ee08a62e40e264c2d" +
-                        "5eab91"
-                },
-                {
-                    "connection_type": "contacted_ips",
-                    "source":
-                        "720d6a4288fa43357151bdeb8dc9cdb7c27fd7db1b5" +
-                        "f76345f5ff094d48ae5a0",
-                    "target":
-                        "relationships_contacted_ips_5504e04083d6146" +
-                        "a67cb0d671d8ad5885315062c9ee08a62e40e264c2d" +
-                        "5eab91"
-                },
-                {
-                    "connection_type": "contacted_ips",
-                    "source":
-                        "b20ce00a6864225f05de6407fac80ddb83cd0aec00a" +
-                        "da438c1e354cdd0d7d5df",
-                    "target":
-                        "relationships_contacted_ips_5504e04083d6146" +
-                        "a67cb0d671d8ad5885315062c9ee08a62e40e264c2d" +
-                        "5eab91"
-                },
-                {
-                    "connection_type": "contacted_ips",
-                    "source":
-                        "5961861d2b9f50d05055814e6bfd1c6291b30719f8a" +
-                        "4d02d4cf80c2e87753fa1",
-                    "target":
-                        "relationships_contacted_ips_5504e04083d6146" +
-                        "a67cb0d671d8ad5885315062c9ee08a62e40e264c2d" +
-                        "5eab91"
-                },
-                {
-                    "connection_type": "contacted_ips",
-                    "source":
-                        "relationships_contacted_ips_5504e04083d6146" +
-                        "a67cb0d671d8ad5885315062c9ee08a62e40e264c2d" +
-                        "5eab91",
-                    "target": "178.62.125.244"
-                },
-                {
-                    "connection_type": "communicating_files",
-                    "source": "178.62.125.244",
-                    "target":
-                        "relationships_communicating_files_178" +
-                        "62125244"
-                },
-                {
-                    "connection_type": "communicating_files",
-                    "source":
-                        "relationships_communicating_files_178" +
-                        "62125244",
-                    "target":
-                        "e6ecb146f469d243945ad8a5451ba1129c5b190f7d5" +
-                        "0c64580dbad4b8246f88e"
-                }
-            ],
-            "nodes": [
-                {
-                    "entity_attributes": {
-                        "has_detections": 45,
-                        "type_tag": "docx"
-                    },
-                    "entity_id":
-                        "5504e04083d6146a67cb0d671d8ad5885315062c9ee" +
-                        "08a62e40e264c2d5eab91",
-                    "index": 0,
-                    "type": "file",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_attributes": {
-                        "country": "GB"
-                    },
-                    "entity_id": "178.62.125.244",
-                    "index": 1,
-                    "type": "ip_address",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_id":
-                        "relationships_contacted_ips_5504e04083d6146" +
-                        "a67cb0d671d8ad5885315062c9ee08a62e40e264c2d" +
-                        "5eab91",
-                    "index": 2,
-                    "type": "relationship",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_attributes": {
-                        "has_detections": 51,
-                        "type_tag": "peexe"
-                    },
-                    "entity_id":
-                        "efa0b414a831cbf724d1c67808b7483dec22a981ae6" +
-                        "70947793d114048f88057",
-                    "index": 3,
-                    "type": "file",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_attributes": {
-                        "has_detections": 55,
-                        "type_tag": "peexe"
-                    },
-                    "entity_id":
-                        "720d6a4288fa43357151bdeb8dc9cdb7c27fd7db1b5" +
-                        "f76345f5ff094d48ae5a0",
-                    "index": 4,
-                    "type": "file",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_attributes": {
-                        "has_detections": 52,
-                        "type_tag": "peexe"
-                    },
-                    "entity_id":
-                        "b20ce00a6864225f05de6407fac80ddb83cd0aec00a" +
-                        "da438c1e354cdd0d7d5df",
-                    "index": 5,
-                    "type": "file",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_attributes": {
-                        "has_detections": 59,
-                        "type_tag": "peexe"
-                    },
-                    "entity_id":
-                        "5961861d2b9f50d05055814e6bfd1c6291b30719f8a" +
-                        "4d02d4cf80c2e87753fa1",
-                    "index": 6,
-                    "type": "file",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_attributes": {
-                        "has_detections": 57,
-                        "type_tag": "peexe"
-                    },
-                    "entity_id":
-                        "e6ecb146f469d243945ad8a5451ba1129c5b190f7d5" +
-                        "0c64580dbad4b8246f88e",
-                    "index": 7,
-                    "type": "file",
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "entity_id":
-                        "relationships_communicating_files_178621252" +
-                        "44",
-                    "index": 8,
-                    "type": "relationship",
-                    "x": 0,
-                    "y": 0
-                }
-            ],
-            "private": True,
-            "views_count": 6
-        }
-    }
-}
+with (
+    open(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "resources/virustotal_graph_id.json"
+        )
+    )
+) as fp:
+  GRAPH_RESPONSE_DATA = json.load(fp)
 
 VIEWERS_RESPONSE_DATA = {
     "data": [
@@ -243,7 +54,7 @@ def test_load_from_id_with_match(mocker):
   ]
   m = mocker.Mock(status_code=200, json=mocker.Mock(side_effect=side_effects))
   mocker.patch("requests.get", return_value=m)
-  test_graph = vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)
+  test_graph = vt_graph_api.load.virustotal.from_graph_id(GRAPH_ID, API_KEY)
   nodes = [
       "5504e04083d6146a67cb0d671d8ad5885315062c9ee08a62e40e264c2d5eab91",
       "178.62.125.244",
@@ -302,7 +113,7 @@ def test_load_from_id_without_editors_and_viewers(mocker):
       mocker.Mock(status_code=404)
   ]
   mocker.patch("requests.get", side_effect=side_effects)
-  test_graph = vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)
+  test_graph = vt_graph_api.load.virustotal.from_graph_id(GRAPH_ID, API_KEY)
   nodes = [
       "5504e04083d6146a67cb0d671d8ad5885315062c9ee08a62e40e264c2d5eab91",
       "178.62.125.244",
@@ -359,7 +170,7 @@ def test_load_from_id_with_fail_request(mocker):
       match=r"Error to find graph with id: DUMMY_ID. Response code: 400"
   ):
     mocker.patch("requests.get", return_value=mocker.Mock(status_code=400))
-    vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)
+    vt_graph_api.load.virustotal.from_graph_id(GRAPH_ID, API_KEY)
 
 
 def test_load_from_id_with_wrong_json(mocker):
@@ -375,4 +186,4 @@ def test_load_from_id_with_wrong_json(mocker):
     ]
     m = mocker.Mock(status_code=200, json=mocker.Mock(side_effect=side_effects))
     mocker.patch("requests.get", return_value=m)
-    vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)
+    vt_graph_api.load.virustotal.from_graph_id(GRAPH_ID, API_KEY)

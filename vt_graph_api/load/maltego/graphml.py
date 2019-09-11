@@ -6,7 +6,9 @@ maltego graph in graphml (XML) format.
 
 
 import defusedxml.ElementTree as ET
-import vt_graph_api
+import vt_graph_api.graph
+import vt_graph_api.load.helpers
+import vt_graph_api.load.maltego.legend
 
 
 XML_NAMESPACE = "{http://graphml.graphdrawing.org/xmlns}"
@@ -70,7 +72,7 @@ def from_graphml(
   """
   xml_graph = ET.parse(filename).getroot().find(XML_NAMESPACE + "graph")
   node_reference = {}
-  graph = vt_graph_api.VTGraph(
+  graph = vt_graph_api.graph.VTGraph(
       api_key=api_key,
       name=name or filename,
       private=private,

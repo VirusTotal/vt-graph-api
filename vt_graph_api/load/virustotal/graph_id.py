@@ -6,7 +6,10 @@ retrieve saved graph from virustotal.
 
 
 import requests
-import vt_graph_api
+import vt_graph_api.errors
+import vt_graph_api.graph
+import vt_graph_api.node
+import vt_graph_api.version
 
 
 def from_graph_id(graph_id, api_key, intelligence=False):
@@ -91,7 +94,7 @@ def from_graph_id(graph_id, api_key, intelligence=False):
         else:
           user_editors.append(editor["id"])
     # Create empty graph
-    graph = vt_graph_api.VTGraph(
+    graph = vt_graph_api.graph.VTGraph(
         api_key=api_key,
         name=graph_name,
         private=private,
@@ -109,7 +112,7 @@ def from_graph_id(graph_id, api_key, intelligence=False):
     )
     for node_data in suitable_nodes:
       node_type = node_data["type"]
-      if node_type not in vt_graph_api.Node.SUPPORTED_NODE_TYPES:
+      if node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
         node_type = node_data["entity_attributes"]["custom_type"]
       graph.add_node(
           node_data["entity_id"], node_type,
