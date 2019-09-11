@@ -191,3 +191,37 @@ def test_add_node_with_intelligence_search_and_not_found(mocker):
   )
   assert test_graph.nodes[added_node_id] == added_node
   mocker.resetall()
+
+
+def test_add_nodes(mocker):
+  """Test add nodes."""
+  m = mocker.Mock(status_code=200, json=mocker.Mock(return_value={}))
+  mocker.patch("requests.get", return_value=m)
+  added_node_id_1 = ("ed01ebfbc9eb5bbea545af4d01bf5f107166" +
+                   "1840480439c6e5babe8e080e41aa")
+  added_node_type_1 = "file"
+  added_node_id_2 = "dummy.com"
+  added_node_type_2 = "domain"
+  nodes_to_add = [
+      (
+          added_node_id_1,
+          added_node_type_1,
+          "",
+          None,
+          0,
+          0
+      ),
+      (
+          added_node_id_2,
+          added_node_type_2,
+          "",
+          None,
+          0,
+          0
+      )
+  ]
+
+  added_nodes = test_graph.add_nodes(nodes_to_add)
+  assert test_graph.nodes[added_node_id_1] in added_nodes
+  assert test_graph.nodes[added_node_id_2] in added_nodes
+  mocker.resetall()

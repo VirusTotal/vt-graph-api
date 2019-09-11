@@ -86,6 +86,7 @@ def from_graphml(
 
   # First add nodes to graph.
   nodes = (node for node in xml_graph.findall(XML_NAMESPACE + "node"))
+  nodes_to_add = []
   for node in nodes:
     node_data = (
         node
@@ -95,7 +96,6 @@ def from_graphml(
     maltego_id = node.get("id")
     maltego_properties = node_data.find(XML_MTGX + "Properties")
     node_type = node_data.get("type")
-    added_nodes = []
     if node_type in vt_graph_api.load.maltego.legend.MALTEGO_TYPES_REFERENCE:
       node_ids = []
       suitable_values = (
@@ -116,11 +116,17 @@ def from_graphml(
         else:
           node_ids.append(value)
       for node_id in node_ids:
-        added_nodes.append(graph.add_node(
+        nodes_to_add.append((
             node_id,
-            vt_graph_api.load.maltego.legend.MALTEGO_TYPES_REFERENCE[node_type]
+            vt_graph_api.load.maltego.legend.MALTEGO_TYPES_REFERENCE[node_type],
+            "",
+            None,
+            0,
+            0
         ))
-      node_reference[maltego_id] = added_nodes, node_type
+      node_reference[maltego_id] = node_ids, node_type
+  # Add all nodes concurrently
+  graph.add_nodes(nodes_to_add)
 
   # Second add links to graph.
   links = (
@@ -129,8 +135,8 @@ def from_graphml(
       link.get("target") in node_reference
   )
   for link in links:
-    sources, source_type = node_reference[link.get("source")]
-    targets, _ = node_reference[link.get("target")]
+    source_ids, source_type = node_reference[link.get("source")]
+    target_ids, _ = node_reference[link.get("target")]
     connection_type_properties = (
         link
         .find(XML_NAMESPACE + "data")
@@ -141,13 +147,13 @@ def from_graphml(
     for attr in connection_type_properties:
       if attr.get("name") == "maltego.link.transform.display-name":
         connection_type = attr.find(XML_MTGX + "Value").text
-    for source in sources:
-      for target in targets:
-        if source != target:
+    for source_id in source_ids:
+      for target_id in target_ids:
+        if source_id != target_id:
           # Add link between source and target with te correct connection_type
           # to graph.
           graph.add_link(
-              source.node_id, target.node_id,
+              source_id, target_id,
               (
                   vt_graph_api.load.maltego.legend
                   .MALTEGO_EDGE_REFERENCE.get(source_type, {})

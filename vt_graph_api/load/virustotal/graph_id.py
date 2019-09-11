@@ -110,16 +110,21 @@ def from_graph_id(graph_id, api_key, intelligence=False):
     suitable_nodes = (
         node for node in nodes if node["type"] != "relationship"
     )
+    nodes_to_add = []
     for node_data in suitable_nodes:
       node_type = node_data["type"]
       if node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
         node_type = node_data["entity_attributes"]["custom_type"]
-      graph.add_node(
-          node_data["entity_id"], node_type,
-          False, node_data.get("text", ""),
+      nodes_to_add.append((
+          node_data["entity_id"],
+          node_type,
+          node_data.get("text", ""),
           node_data.get("entity_attributes"),
-          node_data["x"], node_data["y"]
-      )
+          node_data["x"],
+          node_data["y"]
+      ))
+    # Add all nodes concurrently
+    graph.add_nodes(nodes_to_add, False)
 
     # It is necessary to clean the given links because they have relationship
     # nodes

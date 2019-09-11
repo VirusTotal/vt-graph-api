@@ -109,6 +109,7 @@ class VTGraph(object):
     self.links = {}
 
     self._api_calls_lock = threading.Lock()
+    self._nodes_lock = threading.Lock()
     self._index = 0
     self._logger = logging.getLogger("vt_graph")
     self._logger.addHandler(logging.StreamHandler())
@@ -590,21 +591,25 @@ class VTGraph(object):
     Returns:
       str: the correct node_id for the given identifier.
     """
-    if node_id in self.nodes:
-      return node_id
+    is_in_graph = False
+    # Make this function thread safe.
+    with self._nodes_lock:
+      if node_id in self.nodes:
+        is_in_graph = True
 
-    if Node.is_url(node_id):
-      node_id = self._get_url_id(node_id)
-    elif Node.is_sha1(node_id) or Node.is_md5(node_id):
-      node_id = self._get_file_sha_256(node_id)
-    # If the node is totally unknow we will search it in intelligence
-    elif (
-        not Node.is_domain(node_id) and
-        not Node.is_ipv4(node_id) and
-        not Node.is_sha256(node_id) and
-        self.intelligence
-    ):
-      node_id = self._get_file_sha_256(node_id, True)
+    if not is_in_graph:
+      if Node.is_url(node_id):
+        node_id = self._get_url_id(node_id)
+      elif Node.is_sha1(node_id) or Node.is_md5(node_id):
+        node_id = self._get_file_sha_256(node_id)
+      # If the node is totally unknow we will search it in intelligence
+      elif (
+          not Node.is_domain(node_id) and
+          not Node.is_ipv4(node_id) and
+          not Node.is_sha256(node_id) and
+          self.intelligence
+      ):
+        node_id = self._get_file_sha_256(node_id, True)
 
     return node_id
 
@@ -1004,7 +1009,12 @@ class VTGraph(object):
     """
     if node_type == "file" or node_type == "url":
       node_id = self._get_node_id(node_id)
-    if node_id not in six.iterkeys(self.nodes):
+
+    # Make this function thread safe.
+    with self._nodes_lock:
+      node_ids = [node_id_ for node_id_ in self.nodes]
+
+    if node_id not in node_ids:
       new_node = Node(node_id, node_type, x, y)
       if label:
         new_node.add_label(label)
@@ -1012,8 +1022,49 @@ class VTGraph(object):
         self._fetch_information(new_node)
       elif node_attributes:
         new_node.add_attributes(node_attributes)
-      self.nodes[node_id] = new_node
-    return self.nodes[node_id]
+      with self._nodes_lock:
+        self.nodes[node_id] = new_node
+
+    # Make this function thread safe.
+    with self._nodes_lock:
+      node = self.nodes[node_id]
+    return node
+
+  def add_nodes(self, node_list, fetch_information=True):
+    """Adds node list to graph.
+
+    Args:
+        node_list ([str, str, str, dict]): list of tuples with the node
+          information in the following format:
+          (node_id, node_type, label, attributes)
+        fetch_information (bool, optional): whether the script will fetch
+        information for this node in VT. If the node already exist in the graph
+        it will not fetch information for it. Defaults to True.
+
+    Returns:
+      [Node]: the list with the added nodes.
+    """
+    futures = []
+    added_nodes = []
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(node_list)
+    ) as pool:
+      for node_id, node_type, label, attributes, x, y in node_list:
+        futures.append(
+            pool.submit(
+                self.add_node,
+                node_id,
+                node_type,
+                fetch_information,
+                label,
+                attributes,
+                x,
+                y
+            )
+        )
+      for future in futures:
+        added_nodes.append(future.result())
+      return added_nodes
 
   def expand(self, node_id, expansion, max_nodes_per_relationship=40):
     """Expands the given node with the given expansion.
