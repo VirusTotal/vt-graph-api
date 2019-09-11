@@ -29,7 +29,8 @@ XML_MALTEGO_TYPES_VALUES = {
     "maltego.Organization": "title",
     "maltego.Company": "title",
     "maltego.Service": "properties.service",
-    "maltego.Port": "properties.port"
+    "maltego.Port": "properties.port",
+    "maltego.Phrase": "text"
 }
 
 
@@ -95,7 +96,7 @@ def from_graphml(
     maltego_properties = node_data.find(XML_MTGX + "Properties")
     node_type = node_data.get("type")
     added_nodes = []
-    if node_type in vt_graph_api.load.maltego.legend.MALTEGO_TYPES_CONVERSOR:
+    if node_type in vt_graph_api.load.maltego.legend.MALTEGO_TYPES_REFERENCE:
       node_ids = []
       suitable_values = (
           attr for attr in maltego_properties
@@ -117,9 +118,9 @@ def from_graphml(
       for node_id in node_ids:
         added_nodes.append(graph.add_node(
             node_id,
-            vt_graph_api.load.maltego.legend.MALTEGO_TYPES_CONVERSOR[node_type]
+            vt_graph_api.load.maltego.legend.MALTEGO_TYPES_REFERENCE[node_type]
         ))
-      node_reference[maltego_id] = added_nodes
+      node_reference[maltego_id] = added_nodes, node_type
 
   # Second add links to graph.
   links = (
@@ -128,25 +129,29 @@ def from_graphml(
       link.get("target") in node_reference
   )
   for link in links:
-    source_ids = (node.node_id for node in node_reference[link.get("source")])
-    target_ids = (node.node_id for node in node_reference[link.get("target")])
-    connection_type = (
+    sources, source_type = node_reference[link.get("source")]
+    targets, _ = node_reference[link.get("target")]
+    connection_type_properties = (
         link
         .find(XML_NAMESPACE + "data")
         .find(XML_MTGX + "MaltegoLink")
-    ).get("type")
-    # Check if the connection_type is SUPPORTED and get the appropiate type
-    # for VTGraph.
-    if connection_type in vt_graph_api.load.maltego.legend.MALTEGO_EDGE_CONVERSOR:
-      for source_id in source_ids:
-        for target_id in target_ids:
+        .find(XML_MTGX + "Properties")
+    )
+    connection_type = ""
+    for attr in connection_type_properties:
+      if attr.get("name") == "maltego.link.transform.display-name":
+        connection_type = attr.find(XML_MTGX + "Value").text
+    for source in sources:
+      for target in targets:
+        if source != target:
           # Add link between source and target with te correct connection_type
           # to graph.
           graph.add_link(
-              source_id, target_id,
+              source.node_id, target.node_id,
               (
-                  vt_graph_api.load.maltego.legend.
-                  MALTEGO_EDGE_CONVERSOR[connection_type]
+                  vt_graph_api.load.maltego.legend
+                  .MALTEGO_EDGE_REFERENCE.get(source_type, {})
+                  .get(connection_type, "manual")
               )
           )
 

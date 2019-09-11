@@ -1166,7 +1166,6 @@ class VTGraph(object):
           "it is no possible to add links between the same node; id: {node_id}"
           .format(node_id=node_source)
       )
-
     node_source = self._get_node_id(node_source)
     node_target = self._get_node_id(node_target)
     if node_source not in self.nodes:
