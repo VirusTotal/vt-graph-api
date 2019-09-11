@@ -243,7 +243,7 @@ def test_load_from_id_with_match(mocker):
   ]
   m = mocker.Mock(status_code=200, json=mocker.Mock(side_effect=side_effects))
   mocker.patch("requests.get", return_value=m)
-  test_graph = vt_graph_api.load.from_vt_graph_id(API_KEY, GRAPH_ID)
+  test_graph = vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)
   nodes = [
       "5504e04083d6146a67cb0d671d8ad5885315062c9ee08a62e40e264c2d5eab91",
       "178.62.125.244",
@@ -302,7 +302,7 @@ def test_load_from_id_without_editors_and_viewers(mocker):
       mocker.Mock(status_code=404)
   ]
   mocker.patch("requests.get", side_effect=side_effects)
-  test_graph = vt_graph_api.load.from_vt_graph_id(API_KEY, GRAPH_ID)
+  test_graph = vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)
   nodes = [
       "5504e04083d6146a67cb0d671d8ad5885315062c9ee08a62e40e264c2d5eab91",
       "178.62.125.244",
@@ -359,7 +359,7 @@ def test_load_from_id_with_fail_request(mocker):
       match=r"Error to find graph with id: DUMMY_ID. Response code: 400"
   ):
     mocker.patch("requests.get", return_value=mocker.Mock(status_code=400))
-    vt_graph_api.load.from_vt_graph_id(API_KEY, GRAPH_ID)
+    vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)
 
 
 def test_load_from_id_with_wrong_json(mocker):
@@ -375,4 +375,4 @@ def test_load_from_id_with_wrong_json(mocker):
     ]
     m = mocker.Mock(status_code=200, json=mocker.Mock(side_effect=side_effects))
     mocker.patch("requests.get", return_value=m)
-    vt_graph_api.load.from_vt_graph_id(API_KEY, GRAPH_ID)
+    vt_graph_api.load.from_vt_graph_id(GRAPH_ID, API_KEY)

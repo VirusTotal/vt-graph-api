@@ -6,7 +6,6 @@ VTGraph node representation.
 
 
 import re
-from vt_graph_api.errors import NodeNotSupportedTypeError
 
 
 URL_RE = re.compile(r"https?://", re.IGNORECASE)
@@ -78,7 +77,7 @@ class Node(object):
           "referrer_files",
           "resolutions",
           "urls",
-      ],
+      ]
   }
 
   def __init__(self, node_id, node_type, x=0, y=0):
@@ -93,14 +92,11 @@ class Node(object):
     Raises:
       NodeNotSupportedTypeError: if node_type not in SUPPORTED_NODE_TYPES
     """
-    if node_type not in self.SUPPORTED_NODE_TYPES:
-      raise NodeNotSupportedTypeError("Node type: %s not supported" % node_type)
     self.node_id = node_id
     self.node_type = node_type
     self.x = x
     self.y = y
-
-    self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
+    self.expansions_available = self.NODE_EXPANSIONS.get(node_type, [])
     self.attributes = None
     self.label = ""
     self.children = {

@@ -191,16 +191,3 @@ def test_add_node_with_intelligence_search_and_not_found(mocker):
   )
   assert test_graph.nodes[added_node_id] == added_node
   mocker.resetall()
-
-
-def test_add_node_not_supported(mocker):
-  """Test add node with not supported type."""
-  with pytest.raises(vt_graph_api.errors.NodeNotSupportedTypeError,
-                     match=r"Node type: dummy not supported"):
-    mocker.patch.object(test_graph, "_fetch_information")
-    added_node_id = "invented"
-    test_graph.add_node(
-        added_node_id, "dummy",
-        label="Investigation node"
-    )
-  mocker.resetall()

@@ -1,4 +1,4 @@
-"""vt_graph_api.load.vt_graph_id.
+"""vt_graph_api.load.virustotal.graph_id.
 
 This modules provides graph loader method for
 retrieve saved graph from virustotal.
@@ -6,28 +6,28 @@ retrieve saved graph from virustotal.
 
 
 import requests
-from vt_graph_api.errors import LoaderError
-from vt_graph_api.graph import VTGraph
-from vt_graph_api.node import Node
-from vt_graph_api.version import __x_tool__
+import vt_graph_api
 
 
-def from_vt_graph_id(api_key, graph_id):
-  """Load VTGraph using the given graph_id.
+def from_graph_id(graph_id, api_key, intelligence=False):
+  """Load VTGraph using the given virustotal graph_id.
 
   Args:
-    api_key (str): VT API key.
     graph_id (str): VT Graph ID.
+    api_key (str): VT API key.
+    intelligence (bool, optional): if True, the graph will search any
+        available information using vt intelligence for the node if there is
+        no normal information for it. Defaults to false.
 
   Raises:
-    LoaderError: wether the given graph_id cannot be found or JSON
-      does not have the correct structure.
+    vt_graph_api.errors.LoaderError: wether the given graph_id cannot be found
+      or JSON does not have the correct structure.
 
   Returns:
     VTGraph: the imported graph.
   """
-  imported_graph = None
-  headers = {"x-apikey": api_key, "x-tool": __x_tool__}
+  graph = None
+  headers = {"x-apikey": api_key, "x-tool": vt_graph_api.version.__x_tool__}
 
   # check if user has editor permissions
 
@@ -38,7 +38,7 @@ def from_vt_graph_id(api_key, graph_id):
   )
   graph_data_response = requests.get(graph_data_url, headers=headers)
   if graph_data_response.status_code != 200:
-    raise LoaderError(
+    raise vt_graph_api.errors.LoaderError(
         "Error to find graph with id: {graph_id}. Response code: {status_code}"
         .format(graph_id=graph_id, status_code=graph_data_response.status_code)
     )
@@ -74,7 +74,6 @@ def from_vt_graph_id(api_key, graph_id):
     private = data["data"]["attributes"]["private"]
     nodes = data["data"]["attributes"]["nodes"]
     links = data["data"]["attributes"]["links"]
-
     # Set viewers
     if has_viewers:
       viewers_data = viewers_data_response.json()
@@ -83,7 +82,6 @@ def from_vt_graph_id(api_key, graph_id):
           group_viewers.append(viewer["id"])
         else:
           user_viewers.append(viewer["id"])
-
     # Set editors
     if has_editors:
       editors_data = editors_data_response.json()
@@ -92,29 +90,31 @@ def from_vt_graph_id(api_key, graph_id):
           group_editors.append(editor["id"])
         else:
           user_editors.append(editor["id"])
-
     # Create empty graph
-    imported_graph = VTGraph(
+    graph = vt_graph_api.VTGraph(
         api_key=api_key,
         name=graph_name,
         private=private,
+        intelligence=intelligence,
         user_editors=user_editors,
         user_viewers=user_viewers,
         group_editors=group_editors,
         group_viewers=group_viewers,
     )
-
-    imported_graph.graph_id = graph_id
+    graph.graph_id = graph_id
 
     # Adds nodes
     suitable_nodes = (
-        node for node in nodes if node["type"] in Node.SUPPORTED_NODE_TYPES
+        node for node in nodes if node["type"] != "relationship"
     )
     for node_data in suitable_nodes:
-      imported_graph.add_node(
-          node_data["entity_id"], node_data["type"],
+      node_type = node_data["type"]
+      if node_type not in vt_graph_api.Node.SUPPORTED_NODE_TYPES:
+        node_type = node_data["entity_attributes"]["custom_type"]
+      graph.add_node(
+          node_data["entity_id"], node_type,
           False, node_data.get("text", ""),
-          node_data["entity_attributes"],
+          node_data.get("entity_attributes"),
           node_data["x"], node_data["y"]
       )
 
@@ -132,7 +132,7 @@ def from_vt_graph_id(api_key, graph_id):
     )
 
     for link_data in suitable_links:
-      imported_graph.add_link(
+      graph.add_link(
           link_data["source"],
           replace_nodes.get(
               link_data["target"],
@@ -142,6 +142,7 @@ def from_vt_graph_id(api_key, graph_id):
       )
 
   except KeyError:
-    raise LoaderError("JSON wrong structure")
+    raise vt_graph_api.errors.LoaderError("JSON wrong structure")
 
-  return imported_graph
+  # return the imported graph
+  return graph

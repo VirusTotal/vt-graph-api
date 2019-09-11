@@ -136,8 +136,8 @@ class VTGraph(object):
       return node.attributes["has_detections"]
     else:
       return (
-          node.attributes["last_analysis_stats"]["malicious"] +
-          node.attributes["last_analysis_stats"]["suspicious"]
+          node.attributes.get("last_analysis_stats", {}).get("malicious", 0) +
+          node.attributes.get("last_analysis_stats", {}).get("suspicious", 0)
       )
 
   def _add_node_to_output(self, output, node_id):
@@ -191,6 +191,12 @@ class VTGraph(object):
               "has_detections": has_detections,
           }
           node_data["entity_attributes"] = entity_attributes
+
+      if node.node_type not in Node.SUPPORTED_NODE_TYPES:
+        node_data["type"] = "custom"
+        node_data["entity_attributes"] = {
+            "custom_type": node.node_type
+        }
 
     output["data"]["attributes"]["nodes"].append(node_data)
     self._index += 1
@@ -446,23 +452,30 @@ class VTGraph(object):
         self._add_node_to_output(output, target_id)
         added.add(target_id)
 
-      # Relationship node.
-      relationship_id = self.nodes[source_id].relationship_ids.get(expansion)
-      if relationship_id not in added:
-        self._add_node_to_output(output, relationship_id)
-        added.add(relationship_id)
+      if expansion == "manual":
+        output["data"]["attributes"]["links"].append({
+            "connection_type": expansion,
+            "source": source_id,
+            "target": target_id,
+        })
+      else:
+        # Relationship node.
+        relationship_id = self.nodes[source_id].relationship_ids.get(expansion)
+        if relationship_id not in added:
+          self._add_node_to_output(output, relationship_id)
+          added.add(relationship_id)
 
-      # Links
-      output["data"]["attributes"]["links"].append({
-          "connection_type": expansion,
-          "source": source_id,
-          "target": relationship_id,
-      })
-      output["data"]["attributes"]["links"].append({
-          "connection_type": expansion,
-          "source": relationship_id,
-          "target": target_id,
-      })
+        # Links
+        output["data"]["attributes"]["links"].append({
+            "connection_type": expansion,
+            "source": source_id,
+            "target": relationship_id,
+        })
+        output["data"]["attributes"]["links"].append({
+            "connection_type": expansion,
+            "source": relationship_id,
+            "target": target_id,
+        })
 
     new_nodes = (node_id for node_id in self.nodes if node_id not in added)
     for node_id in new_nodes:
@@ -577,6 +590,9 @@ class VTGraph(object):
     Returns:
       str: the correct node_id for the given identifier.
     """
+    if node_id in self.nodes:
+      return node_id
+
     if Node.is_url(node_id):
       node_id = self._get_url_id(node_id)
     elif Node.is_sha1(node_id) or Node.is_md5(node_id):
@@ -983,15 +999,16 @@ class VTGraph(object):
       Node: the node object appended to graph.
 
     This call consumes API quota if fetch_information=True. It also consumes
-    API quota if the given node_id is not standar, for example a file with id
+    API quota if the given node_id is not standard, for example a file with id
     in SHA1 or MD5 or URL without VT identifier.
     """
-    node_id = self._get_node_id(node_id)
+    if node_type == "file" or node_type == "url":
+      node_id = self._get_node_id(node_id)
     if node_id not in six.iterkeys(self.nodes):
       new_node = Node(node_id, node_type, x, y)
       if label:
         new_node.add_label(label)
-      if fetch_information:
+      if fetch_information and node_type in Node.SUPPORTED_NODE_TYPES:
         self._fetch_information(new_node)
       elif node_attributes:
         new_node.add_attributes(node_attributes)
@@ -1226,6 +1243,10 @@ class VTGraph(object):
           )
       )
 
+    if (self.nodes[node_source].node_type not in Node.SUPPORTED_NODE_TYPES or
+        self.nodes[node_target].node_type not in Node.SUPPORTED_NODE_TYPES):
+      raise NodeNotSupportedExpansionError("custom nodes cannot be expanded")
+
     return self._resolve_relations(
         self.nodes[node_source],
         [self.nodes[node_target]],
@@ -1271,8 +1292,15 @@ class VTGraph(object):
           )
       )
 
+    if self.nodes[node_source].node_type not in Node.SUPPORTED_NODE_TYPES:
+      raise NodeNotSupportedExpansionError("custom nodes cannot be expanded")
+
     node_source = self.nodes[node_source]
-    target_nodes = list(self.nodes.values())
+    target_nodes = [
+        node for node in self.nodes.values()
+        if node.node_type in Node.SUPPORTED_NODE_TYPES
+    ]
+
     target_nodes.remove(node_source)
 
     return self._resolve_relations(
@@ -1310,6 +1338,23 @@ class VTGraph(object):
       del self.links[(node_source, node_target, connection_type)]
       self.nodes[node_source].delete_child(node_target, connection_type)
     del self.nodes[node_id]
+
+  def has_node(self, node_id):
+    """Check if graph contains node with the given node_id.
+
+    Args:
+        node_id (str): node ID.
+
+    Returns:
+        bool: wehther the graph contains the node with the given node_id.
+
+    This call consumes API quota if the given node_id is not standard vt id.
+    """
+    node_id = self._get_node_id(node_id)
+    if node_id not in self.nodes:
+      return False
+    else:
+      return True
 
   def get_ui_link(self):
     """Requires that save_graph was called."""
