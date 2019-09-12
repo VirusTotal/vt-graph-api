@@ -134,7 +134,7 @@ def from_graphml(
           ))
         node_reference[maltego_id] = node_ids, node_type
     # Add all nodes concurrently
-    graph.add_nodes(nodes_to_add)
+    graph.add_nodes(nodes_to_add, fetch_information)
 
     # Second add links to graph.
     links = (
