@@ -1,7 +1,7 @@
-"""VTGraph load usage example."""
+"""VirusTotal graph id load example."""
 
 
-import vt_graph_api.load
+import vt_graph_api.load.virustotal
 
 
 API_KEY = ""  # Insert your VT API here.
@@ -9,7 +9,7 @@ GRAPH_ID = ""  # Insert yout graph id here.
 
 
 # Retrieve the graph.
-graph = vt_graph_api.load.from_vt_graph_id(API_KEY, GRAPH_ID)
+graph = vt_graph_api.load.virustotal.from_graph_id(GRAPH_ID, API_KEY)
 
 # modify your graph here
 
