@@ -14,8 +14,8 @@ pip install . --user
 
 ```python
 >>> import vt_graph_api
->>> vt_graph_api.VERSION
-api-X.X.X
+>>> vt_graph_api.__version__
+X.X.X
 ```
 
 # Documentation
