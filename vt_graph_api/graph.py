@@ -21,15 +21,9 @@ import threading
 import concurrent.futures
 import requests
 import six
-from vt_graph_api.errors import CollaboratorNotFoundError
-from vt_graph_api.errors import MaximumConnectionRetriesError
-from vt_graph_api.errors import NodeNotFoundError
-from vt_graph_api.errors import NodeNotSupportedExpansionError
-from vt_graph_api.errors import SameNodeError
-from vt_graph_api.errors import SaveGraphError
-from vt_graph_api.node import Node
-from vt_graph_api.version import __version__
-from vt_graph_api.version import __x_tool__
+import vt_graph_api.errors
+import vt_graph_api.node
+import vt_graph_api.version
 
 
 class VTGraph(object):
@@ -193,7 +187,7 @@ class VTGraph(object):
           }
           node_data["entity_attributes"] = entity_attributes
 
-      if node.node_type not in Node.SUPPORTED_NODE_TYPES:
+      if node.node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
         node_data["type"] = "custom"
         node_data["entity_attributes"] = {
             "custom_type": node.node_type
@@ -233,7 +227,7 @@ class VTGraph(object):
     )
 
     if response.status_code != requests.codes.ok:
-      raise CollaboratorNotFoundError()
+      raise vt_graph_api.errors.CollaboratorNotFoundError()
 
   def _add_editors(self):
     """Adds editors to the graph.
@@ -266,7 +260,7 @@ class VTGraph(object):
     )
 
     if response.status_code != requests.codes.ok:
-      raise CollaboratorNotFoundError()
+      raise vt_graph_api.errors.CollaboratorNotFoundError()
 
   def _fetch_information(self, node):
     """Fetch VT to get the node information.
@@ -323,7 +317,7 @@ class VTGraph(object):
         self.graph_id = data["data"]["id"]
       else:
         self._log("Saving graph error: {data}".format(data=data))
-        raise SaveGraphError(str(data))
+        raise vt_graph_api.errors.SaveGraphError(str(data))
     else:
       self._log(
           "Saving graph error: {status_code} status code"
@@ -331,7 +325,7 @@ class VTGraph(object):
               status_code=response.status_code
           )
       )
-      raise SaveGraphError(
+      raise vt_graph_api.errors.SaveGraphError(
           "Saving graph error: {status_code} status code"
           .format(
               status_code=response.status_code
@@ -387,7 +381,7 @@ class VTGraph(object):
             not node_to_minimize.relationship_ids.get(expansion)):
           relationship_id = "relationships_{expansion}_{node_id}".format(
               expansion=expansion,
-              node_id=Node.get_id(node.node_id)
+              node_id=vt_graph_api.node.Node.get_id(node.node_id)
           )
           node.relationship_ids[expansion] = relationship_id
           node_to_minimize.relationship_ids[expansion] = relationship_id
@@ -407,7 +401,7 @@ class VTGraph(object):
       for expansion in singles_expansion_relationship:
         relationship_id = "relationships_{expansion}_{node_id}".format(
             expansion=expansion,
-            node_id=Node.get_id(node.node_id)
+            node_id=vt_graph_api.node.Node.get_id(node.node_id)
         )
         node.relationship_ids[expansion] = relationship_id
 
@@ -432,7 +426,7 @@ class VTGraph(object):
             "attributes": {
                 "graph_data": {
                     "description": self.name,
-                    "version": __version__,
+                    "version": vt_graph_api.version.__version__,
                 },
                 "private": self.private,
                 "nodes": [],
@@ -598,15 +592,18 @@ class VTGraph(object):
         is_in_graph = True
 
     if not is_in_graph:
-      if Node.is_url(node_id):
+      if vt_graph_api.node.Node.is_url(node_id):
         node_id = self._get_url_id(node_id)
-      elif Node.is_sha1(node_id) or Node.is_md5(node_id):
+      elif (
+          vt_graph_api.node.Node.is_sha1(node_id) or
+          vt_graph_api.node.Node.is_md5(node_id)
+      ):
         node_id = self._get_file_sha_256(node_id)
       # If the node is totally unknow we will search it in intelligence
       elif (
-          not Node.is_domain(node_id) and
-          not Node.is_ipv4(node_id) and
-          not Node.is_sha256(node_id) and
+          not vt_graph_api.node.Node.is_domain(node_id) and
+          not vt_graph_api.node.Node.is_ipv4(node_id) and
+          not vt_graph_api.node.Node.is_sha256(node_id) and
           self.intelligence
       ):
         node_id = self._get_file_sha_256(node_id, True)
@@ -697,7 +694,7 @@ class VTGraph(object):
       except requests.ConnectionError:
         request_try += 1
         if request_try >= max_retries:
-          raise MaximumConnectionRetriesError()
+          raise vt_graph_api.errors.MaximumConnectionRetriesError()
 
     # Add cursor data.
     has_more = data.get("meta", {})
@@ -720,7 +717,7 @@ class VTGraph(object):
           child_node_type = "ip_address"
         else:
           child_node_type = "domain"
-      new_node = Node(child_node_id, child_node_type)
+      new_node = vt_graph_api.node.Node(child_node_id, child_node_type)
       if "attributes" in node_data:
         new_node.add_attributes(node_data["attributes"])
       expansion_nodes.append(new_node)
@@ -972,7 +969,7 @@ class VTGraph(object):
 
   def _get_headers(self):
     """Returns the request headers."""
-    return {"x-apikey": self.api_key, "x-tool": __x_tool__}
+    return {"x-apikey": self.api_key, "x-tool": vt_graph_api.version.__x_tool__}
 
   def _get_api_endpoint(self, node_type):
     """Returns the api end point."""
@@ -1015,10 +1012,13 @@ class VTGraph(object):
       node_ids = [node_id_ for node_id_ in self.nodes]
 
     if node_id not in node_ids:
-      new_node = Node(node_id, node_type, x, y)
+      new_node = vt_graph_api.node.Node(node_id, node_type, x, y)
       if label:
         new_node.add_label(label)
-      if fetch_information and node_type in Node.SUPPORTED_NODE_TYPES:
+      if (
+          fetch_information and node_type
+          in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
+      ):
         self._fetch_information(new_node)
       elif node_attributes:
         new_node.add_attributes(node_attributes)
@@ -1086,7 +1086,7 @@ class VTGraph(object):
     """
     node_id = self._get_node_id(node_id)
     if node_id not in six.iterkeys(self.nodes):
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_id
@@ -1095,7 +1095,7 @@ class VTGraph(object):
     node = self.nodes[node_id]
 
     if expansion not in node.expansions_available:
-      raise NodeNotSupportedExpansionError(
+      raise vt_graph_api.errors.NodeNotSupportedExpansionError(
           "node {node_id} cannot be expanded with {expansion} expansion"
           .format(
               node_id=node_id,
@@ -1132,7 +1132,7 @@ class VTGraph(object):
     node_id = self._get_node_id(node_id)
 
     if node_id not in six.iterkeys(self.nodes):
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_id
@@ -1212,21 +1212,21 @@ class VTGraph(object):
     This call does NOT consume API quota.
     """
     if node_source == node_target:
-      raise SameNodeError(
+      raise vt_graph_api.errors.SameNodeError(
           "it is no possible to add links between the same node; id: {node_id}"
           .format(node_id=node_source)
       )
     node_source = self._get_node_id(node_source)
     node_target = self._get_node_id(node_target)
     if node_source not in self.nodes:
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_source
           )
       )
     if node_target not in self.nodes:
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_target
@@ -1269,7 +1269,7 @@ class VTGraph(object):
     """
 
     if node_source == node_target:
-      raise SameNodeError(
+      raise vt_graph_api.errors.SameNodeError(
           "it is no possible to add links between the same node; id: {node_id}"
           .format(node_id=node_source)
       )
@@ -1277,7 +1277,7 @@ class VTGraph(object):
     node_source = self._get_node_id(node_source)
     node_target = self._get_node_id(node_target)
     if node_source not in self.nodes:
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_source
@@ -1285,16 +1285,20 @@ class VTGraph(object):
       )
 
     if node_target not in self.nodes:
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_target
           )
       )
 
-    if (self.nodes[node_source].node_type not in Node.SUPPORTED_NODE_TYPES or
-        self.nodes[node_target].node_type not in Node.SUPPORTED_NODE_TYPES):
-      raise NodeNotSupportedExpansionError("custom nodes cannot be expanded")
+    if (self.nodes[node_source].node_type
+        not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES or
+        self.nodes[node_target].node_type
+        not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES):
+      raise vt_graph_api.errors.NodeNotSupportedExpansionError(
+          "custom nodes cannot be expanded"
+      )
 
     return self._resolve_relations(
         self.nodes[node_source],
@@ -1334,20 +1338,25 @@ class VTGraph(object):
     """
     node_source = self._get_node_id(node_source)
     if node_source not in self.nodes:
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_source
           )
       )
 
-    if self.nodes[node_source].node_type not in Node.SUPPORTED_NODE_TYPES:
-      raise NodeNotSupportedExpansionError("custom nodes cannot be expanded")
+    if (
+        self.nodes[node_source].node_type
+        not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
+    ):
+      raise vt_graph_api.errors.NodeNotSupportedExpansionError(
+          "custom nodes cannot be expanded"
+      )
 
     node_source = self.nodes[node_source]
     target_nodes = [
         node for node in self.nodes.values()
-        if node.node_type in Node.SUPPORTED_NODE_TYPES
+        if node.node_type in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
     ]
 
     target_nodes.remove(node_source)
@@ -1371,7 +1380,7 @@ class VTGraph(object):
     """
     node_id = self._get_node_id(node_id)
     if node_id not in self.nodes:
-      raise NodeNotFoundError(
+      raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
               node_id=node_id
@@ -1420,3 +1429,156 @@ class VTGraph(object):
             graph_id=self.graph_id
         )
     )
+
+  @staticmethod
+  def from_graph_id(graph_id, api_key, intelligence=False):
+    """Load VTGraph using the given virustotal graph_id.
+
+    Args:
+      graph_id (str): VT Graph ID.
+      api_key (str): VT API key.
+      intelligence (bool, optional): if True, the graph will search any
+          available information using vt intelligence for the node if there is
+          no normal information for it. Defaults to false.
+
+    Raises:
+      vt_graph_api.errors.LoaderError: wether the given graph_id cannot be found
+        or JSON does not have the correct structure.
+
+    Returns:
+      VTGraph: the imported graph.
+    """
+    graph = None
+    headers = {"x-apikey": api_key, "x-tool": vt_graph_api.version.__x_tool__}
+
+    # check if user has editor permissions
+
+    # Get graph data
+    graph_data_url = (
+        "https://www.virustotal.com/api/v3/graphs/{graph_id}"
+        .format(graph_id=graph_id)
+    )
+    graph_data_response = requests.get(graph_data_url, headers=headers)
+    if graph_data_response.status_code != 200:
+      raise vt_graph_api.errors.LoaderError(
+          "Error to find graph with id: {graph_id}. Response code: {status_code}"
+          .format(
+              graph_id=graph_id,
+              status_code=graph_data_response.status_code
+          )
+      )
+
+    # Get graph viewers
+    has_viewers = True
+    viewers_data_url = (
+        "https://www.virustotal.com/api/v3/graphs/{graph_id}/relationships/viewers"
+        .format(graph_id=graph_id)
+    )
+    viewers_data_response = requests.get(viewers_data_url, headers=headers)
+    if viewers_data_response.status_code != 200:
+      has_viewers = False
+
+    # Get graph editors
+    has_editors = True
+    editors_data_url = (
+        "https://www.virustotal.com/api/v3/graphs/{graph_id}/relationships/editors"
+        .format(graph_id=graph_id)
+    )
+    editors_data_response = requests.get(editors_data_url, headers=headers)
+    if editors_data_response.status_code != 200:
+      has_editors = False
+
+    # Decode data and creates graph
+    try:
+      user_viewers = []
+      group_viewers = []
+      user_editors = []
+      group_editors = []
+      data = graph_data_response.json()
+      graph_name = data["data"]["attributes"]["graph_data"]["description"]
+      private = data["data"]["attributes"]["private"]
+      nodes = data["data"]["attributes"]["nodes"]
+      links = data["data"]["attributes"]["links"]
+      # Set viewers
+      if has_viewers:
+        viewers_data = viewers_data_response.json()
+        for viewer in viewers_data["data"]:
+          if viewer["type"] == "group":
+            group_viewers.append(viewer["id"])
+          else:
+            user_viewers.append(viewer["id"])
+      # Set editors
+      if has_editors:
+        editors_data = editors_data_response.json()
+        for editor in editors_data["data"]:
+          if editor["type"] == "group":
+            group_editors.append(editor["id"])
+          else:
+            user_editors.append(editor["id"])
+      # Create empty graph
+      graph = vt_graph_api.graph.VTGraph(
+          api_key=api_key,
+          name=graph_name,
+          private=private,
+          intelligence=intelligence,
+          user_editors=user_editors,
+          user_viewers=user_viewers,
+          group_editors=group_editors,
+          group_viewers=group_viewers,
+      )
+      graph.graph_id = graph_id
+
+      # Adds nodes
+      suitable_nodes = (
+          node for node in nodes if node["type"] != "relationship"
+      )
+      nodes_to_add = []
+      for node_data in suitable_nodes:
+        node_type = node_data["type"]
+        if node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
+          node_type = node_data["entity_attributes"]["custom_type"]
+        nodes_to_add.append((
+            node_data["entity_id"],
+            node_type,
+            node_data.get("text", ""),
+            node_data.get("entity_attributes"),
+            node_data["x"],
+            node_data["y"]
+        ))
+      # Add all nodes concurrently
+      graph.add_nodes(nodes_to_add, False)
+
+      # It is necessary to clean the given links because they have relationship
+      # nodes
+      replace_nodes = {}
+      for link in (
+          link_ for link_ in links if link_["source"].startswith("relationship")
+      ):
+        if link["source"] not in replace_nodes:
+          replace_nodes[link["source"]] = [link["target"]]
+        else:
+          replace_nodes[link["source"]].append(link["target"])
+
+      suitable_links = (
+          link
+          for link in links
+          if not link["source"].startswith("relationship")
+      )
+
+      for link_data in suitable_links:
+        linked_nodes = replace_nodes.get(
+            link_data["target"],
+            [link_data["target"]]
+        )
+        for node in linked_nodes:
+          graph.add_link(
+              link_data["source"],
+              node,
+              link_data["connection_type"]
+          )
+
+    except KeyError:
+      raise vt_graph_api.errors.LoaderError("JSON wrong structure")
+
+    # return the imported graph
+    return graph
