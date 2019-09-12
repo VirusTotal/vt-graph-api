@@ -17,7 +17,7 @@ MALTEGO_TYPES_REFERENCE = {
     "maltego.Hash": "file",
     "maltego.Document": "file",
     "maltego.Email": "email",
-    "maltego.Person": "actor",
+    "maltego.Person": "victim",
     "maltego.Organization": "department",
     "maltego.Company": "department",
     "maltego.Service": "service",
