@@ -128,11 +128,15 @@ def from_graph_id(graph_id, api_key, intelligence=False):
 
     # It is necessary to clean the given links because they have relationship
     # nodes
-    replace_nodes = {
-        link["source"]: link["target"]
-        for link in links
-        if link["source"].startswith("relationship")
-    }
+    replace_nodes = {}
+    for link in (
+        link_ for link_ in links if link_["source"].startswith("relationship")
+    ):
+      if link["source"] not in replace_nodes:
+        replace_nodes[link["source"]] = [link["target"]]
+      else:
+        replace_nodes[link["source"]].append(link["target"])
+
     suitable_links = (
         link
         for link in links
@@ -140,14 +144,16 @@ def from_graph_id(graph_id, api_key, intelligence=False):
     )
 
     for link_data in suitable_links:
-      graph.add_link(
-          link_data["source"],
-          replace_nodes.get(
-              link_data["target"],
-              link_data["target"]
-          ),
-          link_data["connection_type"]
+      linked_nodes = replace_nodes.get(
+          link_data["target"],
+          [link_data["target"]]
       )
+      for node in linked_nodes:
+        graph.add_link(
+            link_data["source"],
+            node,
+            link_data["connection_type"]
+        )
 
   except KeyError:
     raise vt_graph_api.errors.LoaderError("JSON wrong structure")

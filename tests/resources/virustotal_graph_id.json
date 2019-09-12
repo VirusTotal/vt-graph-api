@@ -62,6 +62,13 @@
                       "relationships_communicating_files_17862125244",
                   "target":
                       "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f88e"
+              },
+              {
+                  "connection_type": "communicating_files",
+                  "source":
+                      "relationships_communicating_files_17862125244",
+                  "target":
+                      "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f885"
               }
           ],
           "nodes": [
@@ -160,6 +167,14 @@
                       "relationships_communicating_files_17862125244",
                   "index": 8,
                   "type": "relationship",
+                  "x": 0,
+                  "y": 0
+              },
+              {
+                  "entity_id":
+                      "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f885",
+                  "index": 9,
+                  "type": "file",
                   "x": 0,
                   "y": 0
               }

@@ -1031,12 +1031,12 @@ class VTGraph(object):
     return node
 
   def add_nodes(self, node_list, fetch_information=True):
-    """Adds node list to graph.
+    """Adds node list to graph concurrently.
 
     Args:
-        node_list ([str, str, str, dict]): list of tuples with the node
-          information in the following format:
-          (node_id, node_type, label, attributes)
+        node_list ([str, str, str, dict, int, int]): list of tuples with the 
+          node information in the following format:
+          (node_id, node_type, label, attributes, x_position, y_position)
         fetch_information (bool, optional): whether the script will fetch
         information for this node in VT. If the node already exist in the graph
         it will not fetch information for it. Defaults to True.

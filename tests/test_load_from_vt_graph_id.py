@@ -62,7 +62,8 @@ def test_load_from_id_with_match(mocker):
       "720d6a4288fa43357151bdeb8dc9cdb7c27fd7db1b5f76345f5ff094d48ae5a0",
       "b20ce00a6864225f05de6407fac80ddb83cd0aec00ada438c1e354cdd0d7d5df",
       "5961861d2b9f50d05055814e6bfd1c6291b30719f8a4d02d4cf80c2e87753fa1",
-      "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f88e"
+      "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f88e",
+      "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f885"
   ]
   links = [
       (
@@ -93,6 +94,11 @@ def test_load_from_id_with_match(mocker):
       (
           "178.62.125.244",
           "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f88e",
+          "communicating_files",
+      ),
+      (
+          "178.62.125.244",
+          "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f885",
           "communicating_files",
       )
   ]
