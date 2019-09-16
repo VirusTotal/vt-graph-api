@@ -34,10 +34,10 @@ class VTGraph(object):
     graph_id (str): graph identifier for VT.
     name (str): graph title.
     api_calls (int): total api calls consumed by graph.
-    private (bool): wether graph is private or not.
-    intelligence (bool, optional): if True, the graph will search any
-      available information using vt intelligence for the node if there is
-      no normal information for it. Defaults to false.
+    private (bool): whether graph is private or not.
+    fetch_vt_enterprise (bool, optional): if True, the graph will search any
+      available information using vt intelligence for the node if there
+      is no normal information for it.
     user_editors ([str]): list with users that can edit graph.
     user_viewers ([str]): list with users that can see graph.
     group_editors ([str]): list with groups that can edit graph.
@@ -56,7 +56,6 @@ class VTGraph(object):
       api_key,
       name="",
       private=False,
-      intelligence=False,
       user_editors=None,
       user_viewers=None,
       group_editors=None,
@@ -70,9 +69,6 @@ class VTGraph(object):
       private (bool, optional): true for private graphs. You need to have
         Private Graph premium feature enabled in your subscription. Defaults
         to False.
-      intelligence (bool, optional): if True, the graph will search any
-        available information using vt intelligence for the node if there is
-        no normal information for it. Defaults to false.
       user_editors ([str], optional): usernames that can edit the graph.
         Defaults to None.
       user_viewers ([str], optional): usernames that can view the graph.
@@ -92,7 +88,6 @@ class VTGraph(object):
     self.name = name
     self._api_calls = 0
     self.private = private
-    self.intelligence = intelligence
     self.user_editors = user_editors or []
     self.user_viewers = user_viewers or []
     self.group_editors = group_editors or []
@@ -102,6 +97,7 @@ class VTGraph(object):
     self.nodes = {}
     self.links = {}
 
+    self._id_references = {}
     self._api_calls_lock = threading.Lock()
     self._nodes_lock = threading.Lock()
     self._index = 0
@@ -109,31 +105,16 @@ class VTGraph(object):
     self._logger.addHandler(logging.StreamHandler())
     self._logger.setLevel(logging.INFO)
 
-  def _log(self, msg):
+  def _log(self, msg, level=logging.INFO):
     """Prints if verbose is enabled.
 
     Args:
-      msg (string): message.
+      msg (str): message.
+      level (str, optional): logging debug level. Defaults to info.
     """
     if self.verbose:
+      self._logger.setLevel(level)
       self._logger.info(msg)
-
-  def _get_node_detections(self, node):
-    """Get node detections from attributes.
-
-    Args:
-      node (Node): node from which detections are getted.
-
-    Returns:
-      int: with the number of detections.
-    """
-    if node.attributes.get("has_detections"):
-      return node.attributes["has_detections"]
-    else:
-      return (
-          node.attributes.get("last_analysis_stats", {}).get("malicious", 0) +
-          node.attributes.get("last_analysis_stats", {}).get("suspicious", 0)
-      )
 
   def _add_node_to_output(self, output, node_id):
     """Add the node with the given node_id to the output.
@@ -161,9 +142,8 @@ class VTGraph(object):
 
       if node.attributes:
         if node.node_type == "file":
-          has_detections = self._get_node_detections(node)
           entity_attributes = {
-              "has_detections": has_detections,
+              "has_detections": node.get_detections(),
           }
 
           if "type_tag" in node.attributes:
@@ -181,13 +161,19 @@ class VTGraph(object):
 
         # Urls.
         elif node.node_type == "url":
-          has_detections = self._get_node_detections(node)
           entity_attributes = {
-              "has_detections": has_detections,
+              "has_detections": node.get_detections(),
           }
           node_data["entity_attributes"] = entity_attributes
 
       if node.node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
+        self._log(
+            "Node: {node_id} has custom-type: {node_type}".format(
+                node_id=node.node_id,
+                node_type=node.node_type
+            ),
+            logging.WARNING
+        )
         node_data["type"] = "custom"
         node_data["entity_attributes"] = {
             "custom_type": node.node_type
@@ -200,7 +186,7 @@ class VTGraph(object):
     """Adds editors to the graph.
 
     Raises:
-      CollaboratorNotFound: if any of the collaborators don"t exist.
+      CollaboratorNotFound: if any of the collaborators does not exist.
     """
     data = []
     for editor in self.user_viewers:
@@ -233,7 +219,7 @@ class VTGraph(object):
     """Adds editors to the graph.
 
     Raises:
-      CollaboratorNotFound: if any of the collaborators don"t exist.
+      CollaboratorNotFound: if any of the collaborators does not exist.
     """
     data = []
     for editor in self.user_editors:
@@ -501,17 +487,16 @@ class VTGraph(object):
   def _get_file_sha_256(self, node_id, is_filename=False):
     """Return the sha256 hash for node_id.
 
-    It only retruns sha256 if matches found in VT, else return node_id.
-    If is_filename=True, it will be searched in VT Intelligence. If the
-    data returned by intelligence API give more than one result, it
-    cannot be possible to infer which one of them is the node we are
-    looking for.
+    Return sha256 if matches found in VT, otherwise return node_id.
+    If is_filename=True, the name will be searched in VT Enterprise. If the
+    data returned by intelligence API give more than one result, we cannot
+    infer which one of them is the node we are looking for.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
         to understand IDs.
-      is_filename (str): wether de given node_id belongs to file without hash.
-        If it is True, it will be searched using VT intelligence. Defaults
+      is_filename (str): whether de given node_id belongs to file without hash.
+        If it is True, the name will be searched in VT Enterprise. Defaults
         to False.
 
     Returns:
@@ -571,50 +556,60 @@ class VTGraph(object):
     self._increment_api_counter()
     return node_id
 
-  def _get_node_id(self, node_id):
+  def _get_node_id(self, node_id, fetch_vt_enterprise=False):
     """Return the correct node_id.
 
-    It only change the given node_id in case of file node with no sha256 hash
-    or url instead of VT url identifier, or the given node_id belong to
+    It only changes the given node_id in case of file node with no sha256 hash,
+    url instead of VT url identifier, or the given node_id belong to
     unknown identifier.
 
     Args:
       node_id (str): identifier of the node. See the top level documentation
         to understand IDs.
+      fetch_vt_enterprise (bool, optional): if True, the graph will search any
+        available information using vt intelligence for the node if there
+        is no normal information for it. Defaults to False.
 
     Returns:
       str: the correct node_id for the given identifier.
+
+    This call consumes API Quota.
     """
-    is_in_graph = False
+    found = False
+    correct_id = node_id
     # Make this function thread safe.
     with self._nodes_lock:
       if node_id in self.nodes:
-        is_in_graph = True
+        found = True
+      # Maybe it has been referenced before.
+      elif node_id in self._id_references:
+        found = True
+        correct_id = self._id_references[node_id]
 
-    if not is_in_graph:
+    if not found:
       if vt_graph_api.node.Node.is_url(node_id):
-        node_id = self._get_url_id(node_id)
+        correct_id = self._get_url_id(node_id)
       elif (
           vt_graph_api.node.Node.is_sha1(node_id) or
           vt_graph_api.node.Node.is_md5(node_id)
       ):
-        node_id = self._get_file_sha_256(node_id)
+        correct_id = self._get_file_sha_256(node_id)
       # If the node is totally unknow we will search it in intelligence
       elif (
           not vt_graph_api.node.Node.is_domain(node_id) and
           not vt_graph_api.node.Node.is_ipv4(node_id) and
           not vt_graph_api.node.Node.is_sha256(node_id) and
-          self.intelligence
+          fetch_vt_enterprise
       ):
-        node_id = self._get_file_sha_256(node_id, True)
-
-    return node_id
+        correct_id = self._get_file_sha_256(node_id, True)
+      self._id_references[node_id] = correct_id
+    return correct_id
 
   def _get_expansion_nodes(self, node, expansion,
                            max_nodes_per_relationship=1000, cursor=None,
                            max_retries=3, expansion_nodes=None,
                            consumed_quotas=0):
-    """Returns the nodes to be attached to given node with the given expansion.
+    """Returns the nodes to be attached to the given node with the given expansion.
 
     Args:
       node (Node): node to be expanded
@@ -742,7 +737,8 @@ class VTGraph(object):
     Args:
       target_nodes ([Node]): target node.
       solution_paths ([paths]): synchronized list of paths. A path
-        is a list of tuples (source, target, expansion_type, source_type) where
+        is a list of tuples in the form ->
+        (source, target, expansion_type, source_type) where
         source (Node) -> relation parent node.
         target (Node) -> relation child node.
         expansion_type (str) -> expansion which has produced the relationship.
@@ -833,11 +829,11 @@ class VTGraph(object):
                 )
     return expansion_nodes
 
-  def _search_connection(self, node_source, target_nodes,
+  def _search_connection(self, source_node, target_nodes,
                          max_api_quotas, max_depth, max_qps):
     """Search connection between node source and all of target_nodes.
 
-                          node_source
+                          source_node
                              +-+
                              |-|
                +----------+-------+-----------+
@@ -849,14 +845,14 @@ class VTGraph(object):
           +---------+                   +-----------+
           |         X                   X           |
      +---+-+       +-+                 +-+         +-+
-     |   +-+       +-+                 +-+         +-+ <--- node_target
+     |   +-+       +-+                 +-+         +-+ <--- target_node
     +-+
-    +-+ <--- node_target
+    +-+ <--- target_node
 
     This algorithm is based on breadth first search.
 
     Args:
-      node_source (Node): start node.
+      source_node (Node): start node.
       target_nodes ([Node]): last node.
       max_api_quotas (int, optional): max number of api quotas.
         Defaults to 10000.
@@ -864,7 +860,7 @@ class VTGraph(object):
       max_qps (int): max number of queries per second as much as
         MAX_PARALLEL_REQUESTS.
     Returns:
-      [[(str, str, str, str))]]: the computed path from node_source to
+      [[(str, str, str, str))]]: the computed path from source_node to
         each node in target_nodes. The elements of the tuple are:
           - source node id.
           - target node id.
@@ -874,14 +870,14 @@ class VTGraph(object):
     """
 
     max_qps = min(max_qps, self.MAX_PARALLEL_REQUESTS)
-    queue = {node_source: ([], 0)}
+    queue = {source_node: ([], 0)}
     paths = []
     has_quota = True
     # Shared variables
     max_api_quotas = [max_api_quotas]
     lock = threading.Lock()
     solution_paths = []
-    visited_nodes = [node_source]
+    visited_nodes = [source_node]
     target_nodes = list(target_nodes)
 
     expand_parallel_partial_ = functools.partial(
@@ -911,13 +907,13 @@ class VTGraph(object):
     paths = list(solution_paths)
     return paths
 
-  def _resolve_relations(self, node_source, target_nodes,
+  def _resolve_relations(self, source_node, target_nodes,
                          max_api_quotas, max_depth, max_qps,
                          fetch_info_collected_nodes):
-    """Try to connect node_source with all of the nodes in target_nodes.
+    """Try to connect source_node with all of the nodes in target_nodes.
 
     Args:
-      node_source (Node): The node that will wanted to be connected.
+      source_node (Node): The node that will wanted to be connected.
       target_nodes ([Node]): The nodes that will be connected with source.
       max_api_quotas (int, optional): maximum number of api quotas that could
         be consumed. Defaults to 100000.
@@ -934,7 +930,7 @@ class VTGraph(object):
       bool: whether at least one relation has been found.
 
     This call consumes API quota (as much as max_api_quotas value), one for
-    each expansion required to find the relations.
+    each expansion required to find the relationship.
     """
     quotas_before_get_id = self.get_api_calls()
     quotas_after_get_id = self.get_api_calls()
@@ -942,16 +938,16 @@ class VTGraph(object):
 
     has_link = False
     for source_, target_, _ in self.links:
-      if (source_ == node_source.node_id and
+      if (source_ == source_node.node_id and
           self.nodes[target_] in target_nodes or
           self.nodes[source_] in target_nodes and
-          target_ == node_source.node_id):
+          target_ == source_node.node_id):
         has_link = True
         break  # Exit if found
 
     if not has_link:
       links = self._search_connection(
-          node_source,
+          source_node,
           target_nodes,
           max_api_quotas,
           max_depth,
@@ -978,9 +974,8 @@ class VTGraph(object):
     else:
       return node_type + "s"
 
-  def add_node(self, node_id, node_type,
-               fetch_information=True, label="",
-               node_attributes=None,
+  def add_node(self, node_id, node_type, fetch_information=True,
+               fetch_vt_enterprise=True, label="", node_attributes=None,
                x=0, y=0):
     """Adds a node with id `node_id` of `node_type` type to the graph.
 
@@ -990,22 +985,26 @@ class VTGraph(object):
       fetch_information (bool, optional): whether the script will fetch
         information for this node in VT. If the node already exist in the graph
         it will not fetch information for it. Defaults to True.
+      fetch_vt_enterprise (bool, optional): if True, the graph will search any
+        available information using vt intelligence for the node if there
+        is no normal information for it. Defaults to True.
       label(str, optional): label that appears next to the node. Defaults to "".
       node_attributes(dict, optional): if it is set and fetch_information is
         False, node_attributes will be added to new node with the given node id.
         Defaults to None.
-      x (int, optional): X coordinate for Node representation in VT Graph GUI.
-      y (int, optional): Y coordinate for Node representation in VT Graph GUI.
+      x (int, optional): X coordinate for Node representation in VT Graph UI.
+      y (int, optional): Y coordinate for Node representation in VT Graph UI.
 
     Returns:
       Node: the node object appended to graph.
 
     This call consumes API quota if fetch_information=True. It also consumes
-    API quota if the given node_id is not standard, for example a file with id
-    in SHA1 or MD5 or URL without VT identifier.
+    API quota if the given node_id is not standard, such as file with id
+    in SHA1 or MD5, URL instead of VT URL identifier or the given node_id belong
+    to unknown identifier.
     """
     if node_type == "file" or node_type == "url":
-      node_id = self._get_node_id(node_id)
+      node_id = self._get_node_id(node_id, fetch_vt_enterprise)
 
     # Make this function thread safe.
     with self._nodes_lock:
@@ -1016,8 +1015,8 @@ class VTGraph(object):
       if label:
         new_node.add_label(label)
       if (
-          fetch_information and node_type
-          in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
+          fetch_information and
+          node_type in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
       ):
         self._fetch_information(new_node)
       elif node_attributes:
@@ -1030,15 +1029,18 @@ class VTGraph(object):
       node = self.nodes[node_id]
     return node
 
-  def add_nodes(self, node_list, fetch_information=True):
-    """Adds node list to graph concurrently.
+  def add_nodes(self, node_list, fetch_information=True,
+                fetch_vt_enterprise=True):
+    """Adds the node_list to graph concurrently.
 
     Args:
-      node_list ([str, str, str, dict, int, int]): list of tuples with the
-        node information in the following format:
-        (node_id, node_type, label, attributes, x_position, y_position)
+      node_list ([dict]): a list of dictionaries with the following format
+      {node_id, node_type, label, attributes, x_position, y_position}.
       fetch_information (bool, optional): whether the script will fetch
-        information for the nodes thath will be added in VT. Defaults to True.
+        information for the nodes that will be added in VT. Defaults to True.
+      fetch_vt_enterprise (bool, optional): if True, the graph will search any
+        available information using vt intelligence for the node if there
+        is no normal information for it. Defaults to True.
 
     Returns:
       [Node]: the list with the added nodes.
@@ -1048,17 +1050,18 @@ class VTGraph(object):
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(node_list)
     ) as pool:
-      for node_id, node_type, label, attributes, x, y in node_list:
+      for node_data in node_list:
         futures.append(
             pool.submit(
                 self.add_node,
-                node_id,
-                node_type,
+                node_data.get("node_id"),
+                node_data.get("node_type"),
                 fetch_information,
-                label,
-                attributes,
-                x,
-                y
+                fetch_vt_enterprise,
+                node_data.get("label", ""),
+                node_data.get("attributes"),
+                node_data.get("x_position", 0),
+                node_data.get("y_position", 0)
             )
         )
       for future in futures:
@@ -1194,58 +1197,58 @@ class VTGraph(object):
                  for node_id in six.iterkeys(self.nodes)
                  if node_id not in visited}
 
-  def add_link(self, node_source, node_target, connection_type):
-    """Adds a link between node_source and node_target with the connection_type.
+  def add_link(self, source_node, target_node, connection_type):
+    """Adds a link between source_node and target_node with the connection_type.
 
     If the source or target node don"t exist, an exception will be raised.
 
     Args:
-      node_source (str): source node ID.
-      node_target (str): target node ID.
+      source_node (str): source node ID.
+      target_node (str): target node ID.
       connection_type (str): connection type, for example
         compressed_parent.
 
     Raises:
       NodeNotFound: if any node is not found.
-      SameNodeError: if node_source and node_target are the same.
+      SameNodeError: if source_node and target_node are the same.
 
     This call does NOT consume API quota.
     """
-    if node_source == node_target:
+    if source_node == target_node:
       raise vt_graph_api.errors.SameNodeError(
           "it is no possible to add links between the same node; id: {node_id}"
-          .format(node_id=node_source)
+          .format(node_id=source_node)
       )
-    node_source = self._get_node_id(node_source)
-    node_target = self._get_node_id(node_target)
-    if node_source not in self.nodes:
+    source_node = self._get_node_id(source_node)
+    target_node = self._get_node_id(target_node)
+    if source_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
-              node_id=node_source
+              node_id=source_node
           )
       )
-    if node_target not in self.nodes:
+    if target_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
-              node_id=node_target
+              node_id=target_node
           )
       )
-    self.links[(node_source, node_target, connection_type)] = True
-    self.nodes[node_source].add_child(node_target, connection_type)
+    self.links[(source_node, target_node, connection_type)] = True
+    self.nodes[source_node].add_child(target_node, connection_type)
 
-  def add_links_if_match(self, node_source, node_target,
+  def add_links_if_match(self, source_node, target_node,
                          max_api_quotas=100000, max_depth=3, max_qps=1000,
                          fetch_info_collected_nodes=True):
-    """Try to find relation between the node_source the and node_target.
+    """Try to find relation between the source_node the and target_node.
 
-    Adds the needed links between node_source and node_target if
-    node_target could be reached by node_source.
+    Adds the needed links between source_node and target_node if
+    target_node could be reached by source_node.
 
     Args:
-      node_source (str): source node ID.
-      node_target (str): target node ID.
+      source_node (str): source node ID.
+      target_node (str): target node ID.
       max_api_quotas (int, optional): maximum number of api quotas that could
         be consumed. Defaults to 100000.
       max_depth (int, optional): maximum number of hops between the nodes.
@@ -1262,60 +1265,60 @@ class VTGraph(object):
 
     Raises:
       NodeNotFound: if source or target node is not found.
-      SameNodeError: if node_source and node_target are the same.
+      SameNodeError: if source_node and target_node are the same.
 
     This call consumes API quota (as much as max_api_quotas value), one for
     each expansion required to find the relation.
     """
 
-    if node_source == node_target:
+    if source_node == target_node:
       raise vt_graph_api.errors.SameNodeError(
           "it is no possible to add links between the same node; id: {node_id}"
-          .format(node_id=node_source)
+          .format(node_id=source_node)
       )
 
-    node_source = self._get_node_id(node_source)
-    node_target = self._get_node_id(node_target)
-    if node_source not in self.nodes:
+    source_node = self._get_node_id(source_node)
+    target_node = self._get_node_id(target_node)
+    if source_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
-              node_id=node_source
+              node_id=source_node
           )
       )
 
-    if node_target not in self.nodes:
+    if target_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
-              node_id=node_target
+              node_id=target_node
           )
       )
 
-    if (self.nodes[node_source].node_type
+    if (self.nodes[source_node].node_type
         not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES or
-        self.nodes[node_target].node_type
+        self.nodes[target_node].node_type
         not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES):
       raise vt_graph_api.errors.NodeNotSupportedExpansionError(
           "custom nodes cannot be expanded"
       )
 
     return self._resolve_relations(
-        self.nodes[node_source],
-        [self.nodes[node_target]],
+        self.nodes[source_node],
+        [self.nodes[target_node]],
         max_api_quotas,
         max_depth,
         max_qps,
         fetch_info_collected_nodes
     )
 
-  def connect_with_graph(self, node_source, max_api_quotas=100000,
+  def connect_with_graph(self, source_node, max_api_quotas=100000,
                          max_depth=3, max_qps=1000,
                          fetch_info_collected_nodes=True):
-    """Try to connect node_source with the current graph nodes.
+    """Try to connect source_node with the current graph nodes.
 
     Args:
-      node_source (Node): source_node ID.
+      source_node (Node): source_node ID.
       max_api_quotas (int, optional): maximum number of api quotas that could
         be consumed. Defaults to 100000.
       max_depth (int, optional): maximum number of hops between the nodes.
@@ -1336,33 +1339,33 @@ class VTGraph(object):
     This call consumes API quota (as much as max_api_quotas value), one for
     each expansion required to find the relations.
     """
-    node_source = self._get_node_id(node_source)
-    if node_source not in self.nodes:
+    source_node = self._get_node_id(source_node)
+    if source_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "node '{node_id}' not found in nodes"
           .format(
-              node_id=node_source
+              node_id=source_node
           )
       )
 
     if (
-        self.nodes[node_source].node_type
+        self.nodes[source_node].node_type
         not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
     ):
       raise vt_graph_api.errors.NodeNotSupportedExpansionError(
           "custom nodes cannot be expanded"
       )
 
-    node_source = self.nodes[node_source]
+    source_node = self.nodes[source_node]
     target_nodes = [
         node for node in self.nodes.values()
         if node.node_type in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
     ]
 
-    target_nodes.remove(node_source)
+    target_nodes.remove(source_node)
 
     return self._resolve_relations(
-        node_source,
+        source_node,
         target_nodes,
         max_api_quotas,
         max_depth,
@@ -1392,21 +1395,21 @@ class VTGraph(object):
       source, target, _ = link
       if source == node_id or target == node_id:
         to_be_deleted.append(link)
-    for node_source, node_target, connection_type in to_be_deleted:
-      del self.links[(node_source, node_target, connection_type)]
-      self.nodes[node_source].delete_child(node_target, connection_type)
+    for source_node, target_node, connection_type in to_be_deleted:
+      del self.links[(source_node, target_node, connection_type)]
+      self.nodes[source_node].delete_child(target_node, connection_type)
     del self.nodes[node_id]
 
   def has_node(self, node_id):
-    """Check if graph contains node with the given node_id.
+    """Check if graph contains the node with the given node_id.
 
     Args:
         node_id (str): node ID.
 
     Returns:
-        bool: wehther the graph contains the node with the given node_id.
+        bool: whether the graph contains the node with the given node_id.
 
-    This call consumes API quota if the given node_id is not standard vt id.
+    This call consumes API quota if the given node_id is not a standard vt id.
     """
     node_id = self._get_node_id(node_id)
     if node_id not in self.nodes:
@@ -1431,19 +1434,16 @@ class VTGraph(object):
     )
 
   @staticmethod
-  def from_graph_id(graph_id, api_key, intelligence=False):
-    """Load VTGraph using the given virustotal graph_id.
+  def from_graph_id(graph_id, api_key):
+    """Load the graph using the given VirusTotal graph id.
 
     Args:
       graph_id (str): VT Graph ID.
       api_key (str): VT API key.
-      intelligence (bool, optional): if True, the graph will search any
-          available information using vt intelligence for the node if there is
-          no normal information for it. Defaults to false.
 
     Raises:
-      vt_graph_api.errors.LoaderError: wether the given graph_id cannot be found
-        or JSON does not have the correct structure.
+      vt_graph_api.errors.LoaderError: whether the given graph_id cannot be
+        found or JSON does not have the correct structure.
 
     Returns:
       VTGraph: the imported graph.
@@ -1520,7 +1520,6 @@ class VTGraph(object):
           api_key=api_key,
           name=graph_name,
           private=private,
-          intelligence=intelligence,
           user_editors=user_editors,
           user_viewers=user_viewers,
           group_editors=group_editors,
@@ -1537,16 +1536,16 @@ class VTGraph(object):
         node_type = node_data["type"]
         if node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
           node_type = node_data["entity_attributes"]["custom_type"]
-        nodes_to_add.append((
-            node_data["entity_id"],
-            node_type,
-            node_data.get("text", ""),
-            node_data.get("entity_attributes"),
-            node_data["x"],
-            node_data["y"]
-        ))
+        nodes_to_add.append({
+            "node_id": node_data["entity_id"],
+            "node_type": node_type,
+            "label": node_data.get("text", ""),
+            "attributes": node_data.get("entity_attributes"),
+            "x_position": node_data["x"],
+            "y_position": node_data["y"]
+        })
       # Add all nodes concurrently
-      graph.add_nodes(nodes_to_add, False)
+      graph.add_nodes(nodes_to_add, False, False)
 
       # It is necessary to clean the given links because they have relationship
       # nodes

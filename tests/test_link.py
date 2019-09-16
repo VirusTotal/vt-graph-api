@@ -130,14 +130,12 @@ def test_connect_with_graph_and_found(mocker):
       [
           (
               "b3b7d8a4daee86280c7e54b0ff3283afe3579480",
-              "26c808a1eb3eaa7bb29ec2ab834559f06f" +
-              "2636b87d5f542223426d6f238ff906",
+              "26c808a1eb3eaa7bb29ec2ab834559f06f2636b87d5f542223426d6f238ff906",
               "execution_parents",
               "file"
           ),
           (
-              "26c808a1eb3eaa7bb29ec2ab834559f06f" +
-              "2636b87d5f542223426d6f238ff906",
+              "26c808a1eb3eaa7bb29ec2ab834559f06f2636b87d5f542223426d6f238ff906",
               "nsis.sf.net",
               "embedded_domains",
               "domain"

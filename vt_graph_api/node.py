@@ -104,6 +104,20 @@ class Node(object):
     }
     self.relationship_ids = {}
 
+  def get_detections(self):
+    """Get node detections from attributes.
+
+    Returns:
+      int: the number of detections.
+    """
+    if self.attributes.get("has_detections"):
+      return self.attributes["has_detections"]
+    else:
+      return (
+          self.attributes.get("last_analysis_stats", {}).get("malicious", 0) +
+          self.attributes.get("last_analysis_stats", {}).get("suspicious", 0)
+      )
+
   @staticmethod
   def is_url(node_id):
     """Check if node_id belongs to url.

@@ -18,13 +18,12 @@ test_graph = vt_graph_api.VTGraph(
 
 def test_get_expansion_nodes_one_level(mocker):
   """Test get expansion nodes at once level."""
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
   request_data = {
       "data": [
           {
               "attributes": {},
-              "id":
-                  "7c11c7ccd384fd9f377da499fc0" +
-                  "59fa08fdc33a1bb870b5bc3812d24dd421a16",
+              "id": rq_id,
               "type": "file"
           }
       ]
@@ -52,13 +51,12 @@ def test_get_expansion_nodes_one_level(mocker):
 
 def test_get_expansion_nodes_n_level_with_cursor(mocker):
   """Test get expansion nodes at n level without cursor."""
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
   request_data = {
       "data": [
           {
               "attributes": {},
-              "id":
-                  "7c11c7ccd384fd9f377da499fc0" +
-                  "59fa08fdc33a1bb870b5bc3812d24dd421a16",
+              "id": rq_id,
               "type": "file"
           }
       ],
@@ -89,13 +87,12 @@ def test_get_expansion_nodes_n_level_with_cursor(mocker):
 
 def test_get_expansion_nodes_n_level_without_cursor(mocker):
   """Test get expansion nodes at n level without cursor."""
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
   request_data = {
       "data": [
           {
               "attributes": {},
-              "id":
-                  "7c11c7ccd384fd9f377da499fc0" +
-                  "59fa08fdc33a1bb870b5bc3812d24dd421a16",
+              "id": rq_id,
               "type": "file"
           }
       ]
@@ -124,13 +121,12 @@ def test_get_expansion_nodes_n_level_without_cursor(mocker):
 def test_expansion_existing_node(mocker):
   """Test expansion existing node in graph."""
   mocker.patch.object(test_graph, "_fetch_information")
+  rq_id =  "fb0b6044347e972e21b6c376e37e1115dab494a2c6b9fb28b92b1e45b45d0ebc"
   first_level = {
       "data": [
           {
               "attributes": {},
-              "id":
-                  "fb0b6044347e972e21b6c376e37e1115" +
-                  "dab494a2c6b9fb28b92b1e45b45d0ebc",
+              "id": rq_id,
               "type": "file"
           }
       ]

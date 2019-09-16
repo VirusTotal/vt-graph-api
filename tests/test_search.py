@@ -27,13 +27,12 @@ test_graph = vt_graph_api.VTGraph(
 
 def test_search_connection_first_level(mocker):
   """Test search connection and found it in the first level."""
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
   request_data = {
       "data": [
           {
               "attributes": {},
-              "id":
-                  "7c11c7ccd384fd9f377da499fc0" +
-                  "59fa08fdc33a1bb870b5bc3812d24dd421a16",
+              "id": rq_id,
               "type": "file"
           }
       ]
@@ -60,14 +59,13 @@ def test_search_connection_first_level(mocker):
 
 def test_search_connection_second_level(mocker):
   """Test search connection and found it in the second level."""
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
   request_response_first_level = [
       {
           "data": [
               {
                   "attributes": {},
-                  "id":
-                      "7c11c7ccd384fd9f377da499fc059fa" +
-                      "08fdc33a1bb870b5bc3812d24dd421a16",
+                  "id": rq_id,
                   "type": "file"
               }
           ]
@@ -113,14 +111,14 @@ def test_search_connection_second_level(mocker):
 
 def test_search_connection_third_level(mocker):
   """Test search connection and found it in the third level."""
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
+  rq_id_2 = "660903b139d5c7ec80af124e93320c18895de32135450d4acd14096e6c0dd2ef"
   request_response_first_level = [
       {
           "data": [
               {
                   "attributes": {},
-                  "id":
-                      "7c11c7ccd384fd9f377da499fc059fa" +
-                      "08fdc33a1bb870b5bc3812d24dd421a16",
+                  "id": rq_id,
                   "type": "file"
               }
           ]
@@ -142,9 +140,7 @@ def test_search_connection_third_level(mocker):
           "data": [
               {
                   "attributes": {},
-                  "id":
-                      "660903b139d5c7ec80af124e93320" +
-                      "c18895de32135450d4acd14096e6c0dd2ef",
+                  "id": rq_id_2,
                   "type": "file"
               }
           ]
@@ -183,14 +179,14 @@ def test_search_connection_third_level(mocker):
 
 def test_search_connection_not_found_and_consumes_max_api_quotas(mocker):
   """Test search connection and found it in the third level."""
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
+  rq_id_2 = "660903b139d5c7ec80af124e93320c18895de32135450d4acd14096e6c0dd2ef"
   request_response_first_level = [
       {
           "data": [
               {
                   "attributes": {},
-                  "id":
-                      "7c11c7ccd384fd9f377da499fc059fa" +
-                      "08fdc33a1bb870b5bc3812d24dd421a16",
+                  "id": rq_id,
                   "type": "file"
               }
           ]
@@ -212,9 +208,7 @@ def test_search_connection_not_found_and_consumes_max_api_quotas(mocker):
           "data": [
               {
                   "attributes": {},
-                  "id":
-                      "660903b139d5c7ec80af124e93320" +
-                      "c18895de32135450d4acd14096e6c0dd2ef",
+                  "id": rq_id_2,
                   "type": "file"
               }
           ]
@@ -242,10 +236,12 @@ def test_search_connection_not_found_and_consumes_max_api_quotas(mocker):
 ###############################################################################
 #                              END TO END TEST                                #
 ###############################################################################
-SOURCE_NODE_ID = ("26c808a1eb3eaa7bb29ec2ab834559f06f" +
-                  "2636b87d5f542223426d6f238ff906")
-INTERMEDIATE_NODE_ID = ("bde526ed27ce0630401ad2479401" +
-                        "4b68e32de413de6bc7f37319e4cc4afa283d")
+SOURCE_NODE_ID = (
+    "26c808a1eb3eaa7bb29ec2ab834559f06f2636b87d5f542223426d6f238ff906"
+)
+INTERMEDIATE_NODE_ID = (
+    "bde526ed27ce0630401ad24794014b68e32de413de6bc7f37319e4cc4afa283d"
+)
 TARGET_NODE_ID = "nsis.sf.net"
 
 EXPANSION_NODES = {

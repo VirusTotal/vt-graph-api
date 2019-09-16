@@ -1,4 +1,4 @@
-"""VirusTotal graph id load example."""
+"""VirusTotal Graph id load example."""
 
 
 import vt_graph_api

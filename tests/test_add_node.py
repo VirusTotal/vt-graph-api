@@ -1,7 +1,6 @@
 """Test add node to graph."""
 
 
-import pytest
 import vt_graph_api
 import vt_graph_api.errors
 
@@ -9,7 +8,6 @@ import vt_graph_api.errors
 test_graph = vt_graph_api.VTGraph(
     "Dummy api key",
     verbose=False,
-    intelligence=True,
     private=False,
     name="Graph test",
     user_editors=["jinfantes"],
@@ -21,40 +19,38 @@ def test_add_node_file_sha256(mocker):
   """Test add node file sha256."""
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value={}))
   mocker.patch("requests.get", return_value=m)
-  added_node_id = ("ed01ebfbc9eb5bbea545af4d01bf5f107166" +
-                   "1840480439c6e5babe8e080e41aa")
+  node_id = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
   added_node = test_graph.add_node(
-      added_node_id, "file",
+      node_id, "file",
       label="Investigation node"
   )
-  assert test_graph.nodes[added_node_id] == added_node
+  assert test_graph.nodes[node_id] == added_node
   assert len(test_graph.nodes) == 1
   # add the same node again to check that graph's nodes not increases
-  test_graph.add_node(added_node_id, "file", label="Investigation node")
+  test_graph.add_node(node_id, "file", label="Investigation node")
   assert len(test_graph.nodes) == 1
   mocker.resetall()
 
 
 def test_add_node_file_sha1(mocker):
   """Test add node file sha1."""
+  rq_id = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
   request_data = {
       "data": {
           "attributes": {
-              "sha256":
-                  "ed01ebfbc9eb5bbea545af4d01bf5f1071661" +
-                  "840480439c6e5babe8e080e41aa"
+              "sha256": rq_id
           }
       }
   }
   mocker.patch.object(test_graph, "_fetch_information")
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
-  added_node_id = "5ff465afaabcbf0150d1a3ab2c2e74f3a4426467"
+  node_id = "5ff465afaabcbf0150d1a3ab2c2e74f3a4426467"
   added_node = test_graph.add_node(
-      added_node_id, "file",
+      node_id, "file",
       label="Investigation node"
   )
-  assert not test_graph.nodes.get(added_node_id)
+  assert not test_graph.nodes.get(node_id)
   assert test_graph.nodes[added_node.node_id] == added_node
   mocker.resetall()
 
@@ -85,11 +81,10 @@ def test_add_node_file_md5(mocker):
 
 def test_add_node_url(mocker):
   """Test add node URL."""
+  rq_id = "u-afb80d6e2f84fbe2248ad78-1566543875"
   request_data = {
       "data": {
-          "id":
-              "u-afb80d6e2f84fbe2248ad781ade97a8a0479ee6" +
-              "91d523142d44f102b2c9753c1-1566543875",
+          "id": rq_id,
           "type": "analysis"
       }
   }
@@ -132,14 +127,13 @@ def test_add_node_ip(mocker):
   mocker.resetall()
 
 
-def test_add_node_with_intelligence_search_and_found(mocker):
-  """Test add node with calling intelligence to search for the node id."""
+def test_add_node_with_fetch_vt_enterprise_search_and_found(mocker):
+  """Test add node calling fetch_vt_enterprise to search for the node id."""
+  rq_id = "5504e04083d6146a67cb0d671d8ad5885315062c9ee08a62e40e264c2d5eab91"
   request_data = {
       "data": [
           {
-              "id":
-                  "5504e04083d6146a67cb0d671d8ad588531" +
-                  "5062c9ee08a62e40e264c2d5eab91",
+              "id": rq_id,
               "type": "file"
           }
       ],
@@ -152,28 +146,25 @@ def test_add_node_with_intelligence_search_and_found(mocker):
   mocker.patch("requests.get", return_value=m)
   added_node_id = "dummy file.bak"
   added_node = test_graph.add_node(
-      added_node_id, "file",
-      label="Investigation node"
+      added_node_id, "file", label="Investigation node"
   )
   assert not test_graph.nodes.get(added_node_id)
   assert test_graph.nodes[added_node.node_id] == added_node
   mocker.resetall()
 
 
-def test_add_node_with_intelligence_search_and_not_found(mocker):
-  """Test add node with calling intelligence without exactly result."""
+def test_add_node_with_fetch_vt_enterprise_search_and_not_found(mocker):
+  """Test add node with calling fetch_vt_enterprise without exact result."""
+  rq_id_1 = "efa0b414a831cbf724d1c67808b7483dec22a981ae670947793d114048f880571"
+  rq_id_2 = "5504e04083d6146a67cb0d671d8ad5885315062c9ee08a62e40e264c2d5eab912"
   request_data = {
       "data": [
           {
-              "id":
-                  "efa0b414a831cbf724d1c67808b7483dec2" +
-                  "2a981ae670947793d114048f880571",
+              "id": rq_id_1, 
               "type": "file"
           },
           {
-              "id":
-                  "5504e04083d6146a67cb0d671d8ad588531" +
-                  "5062c9ee08a62e40e264c2d5eab91",
+              "id": rq_id_2,
               "type": "file"
           }
       ],
@@ -184,10 +175,9 @@ def test_add_node_with_intelligence_search_and_not_found(mocker):
   mocker.patch.object(test_graph, "_fetch_information")
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
-  added_node_id = "dummy file.bak"
+  added_node_id = "dummy file 2.bak"
   added_node = test_graph.add_node(
-      added_node_id, "file",
-      label="Investigation node"
+      added_node_id, "file", label="Investigation node"
   )
   assert test_graph.nodes[added_node_id] == added_node
   mocker.resetall()
@@ -197,28 +187,21 @@ def test_add_nodes(mocker):
   """Test add nodes."""
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value={}))
   mocker.patch("requests.get", return_value=m)
-  added_node_id_1 = ("ed01ebfbc9eb5bbea545af4d01bf5f107166" +
-                   "1840480439c6e5babe8e080e41aa")
+  added_node_id_1 = (
+      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
+  )
   added_node_type_1 = "file"
   added_node_id_2 = "dummy.com"
   added_node_type_2 = "domain"
   nodes_to_add = [
-      (
-          added_node_id_1,
-          added_node_type_1,
-          "",
-          None,
-          0,
-          0
-      ),
-      (
-          added_node_id_2,
-          added_node_type_2,
-          "",
-          None,
-          0,
-          0
-      )
+      {
+          "node_id": added_node_id_1,
+          "node_type": added_node_type_1,
+      },
+      {
+          "node_id": added_node_id_2,
+          "node_type": added_node_type_2,
+      }
   ]
 
   added_nodes = test_graph.add_nodes(nodes_to_add)
