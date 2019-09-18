@@ -33,5 +33,9 @@ class MaximumConnectionRetriesError(Exception):
   pass
 
 
-class LoaderError(Exception):
+class WrongJSONError(Exception):
+  pass
+
+
+class LoadError(Exception):
   pass

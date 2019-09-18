@@ -1,7 +1,7 @@
 """vt_graph_api.graph.
 
 This modules provides the Python object wrapper for
-virustotal graph representation.
+VirusTotal Graph representation.
 
 Documentation:
   https://developers.virustotal.com/v3.0/docs/api-documentation
@@ -35,9 +35,6 @@ class VTGraph(object):
     name (str): graph title.
     api_calls (int): total api calls consumed by graph.
     private (bool): whether graph is private or not.
-    fetch_vt_enterprise (bool, optional): if True, the graph will search any
-      available information using vt intelligence for the node if there
-      is no normal information for it.
     user_editors ([str]): list with users that can edit graph.
     user_viewers ([str]): list with users that can see graph.
     group_editors ([str]): list with groups that can edit graph.
@@ -287,16 +284,17 @@ class VTGraph(object):
         SaveGraphError: if something went bad when saving the graph.
     """
     self._log("Saving local graph")
-    headers = self._get_headers()
     if self.graph_id:
       url = (
           "https://www.virustotal.com/api/v3/graphs/{graph_id}"
           .format(graph_id=self.graph_id)
       )
-      response = requests.patch(url, headers=headers, data=json.dumps(output))
+      response = requests.patch(
+          url, headers=self._get_headers(), data=json.dumps(output))
     else:
       url = "https://www.virustotal.com/api/v3/graphs"
-      response = requests.post(url, headers=headers, data=json.dumps(output))
+      response = requests.post(
+          url, headers=self._get_headers(), data=json.dumps(output))
     if response.status_code == 200:
       data = response.json()
       if "data" in data:
@@ -567,7 +565,7 @@ class VTGraph(object):
       node_id (str): identifier of the node. See the top level documentation
         to understand IDs.
       fetch_vt_enterprise (bool, optional): if True, the graph will search any
-        available information using vt intelligence for the node if there
+        available information using VT intelligence for the node if there
         is no normal information for it. Defaults to False.
 
     Returns:
@@ -986,7 +984,7 @@ class VTGraph(object):
         information for this node in VT. If the node already exist in the graph
         it will not fetch information for it. Defaults to True.
       fetch_vt_enterprise (bool, optional): if True, the graph will search any
-        available information using vt intelligence for the node if there
+        available information using VT intelligence for the node if there
         is no normal information for it. Defaults to True.
       label(str, optional): label that appears next to the node. Defaults to "".
       node_attributes(dict, optional): if it is set and fetch_information is
@@ -1039,7 +1037,7 @@ class VTGraph(object):
       fetch_information (bool, optional): whether the script will fetch
         information for the nodes that will be added in VT. Defaults to True.
       fetch_vt_enterprise (bool, optional): if True, the graph will search any
-        available information using vt intelligence for the node if there
+        available information using VT intelligence for the node if there
         is no normal information for it. Defaults to True.
 
     Returns:
@@ -1067,6 +1065,54 @@ class VTGraph(object):
       for future in futures:
         added_nodes.append(future.result())
       return added_nodes
+
+  def _add_nodes_from_json_graph_data(self, json_graph_data_nodes):
+    """Add all the nodes from the given data.
+
+    The json_graph_data_nodes are the part of the response of requesting VT,
+    for take a graph with any ID, which have the graph nodes information.
+
+    Raises:
+      vt_graph_api.errors.WrongJSONError: whether the API response does not have
+        the correct structure.
+
+    Args:
+        json_graph_data_nodes ([dict]): list of node's data with the following
+        structure => {
+            "entity_attributes": "",
+            "entity_id": "",
+            "index": "",
+            "type": "",
+            "x": "",
+            "y": ""
+        }
+    """
+    try:
+      non_relationship_nodes = (
+          node for node in json_graph_data_nodes
+          if node["type"] != "relationship"
+      )
+      nodes_to_add = []
+      for node_data in non_relationship_nodes:
+        node_type = node_data["type"]
+        if node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
+          node_type = node_data["entity_attributes"]["custom_type"]
+        nodes_to_add.append({
+            "node_id": node_data["entity_id"],
+            "node_type": node_type,
+            "label": node_data.get("text", ""),
+            "attributes": node_data.get("entity_attributes"),
+            "x_position": node_data["x"],
+            "y_position": node_data["y"]
+        })
+      # Add all nodes concurrently
+      self.add_nodes(nodes_to_add, False, False)
+    except KeyError as e:
+      raise vt_graph_api.errors.WrongJSONError(
+          "Unexpected error in json structure at" +
+          "_add_nodes_from_json_graph_data: {msg}"
+          .format(msg=str(e))
+      )
 
   def expand(self, node_id, expansion, max_nodes_per_relationship=40):
     """Expands the given node with the given expansion.
@@ -1312,6 +1358,62 @@ class VTGraph(object):
         fetch_info_collected_nodes
     )
 
+  def _add_links_from_json_graph_data(self, json_graph_data_links):
+    """Add all the nodes from the given data.
+
+    The json_graph_data_links are the part of the response of requesting VT,
+    for take a graph with any ID, which have the graph links information.
+
+    Raises:
+      vt_graph_api.errors.WrongJSONError: whether the API response does not have
+        the correct structure.
+
+    Args:
+        json_graph_data_links ([dict]): list of link's data with the following
+        structure => {
+            "connection_type": "",
+            "source": "",
+            "target": ""
+        }
+    """
+    try:
+      # It is necessary to clean the given links because they have relationship
+      # nodes
+      replace_nodes = {}
+      links = (
+          link_ for link_ in json_graph_data_links
+          if link_["source"].startswith("relationship")
+      )
+      for link in links:
+        if link["source"] not in replace_nodes:
+          replace_nodes[link["source"]] = [link["target"]]
+        else:
+          replace_nodes[link["source"]].append(link["target"])
+
+      non_relationship_links = (
+          link
+          for link in json_graph_data_links
+          if not link["source"].startswith("relationship")
+      )
+
+      for link_data in non_relationship_links:
+        linked_nodes = replace_nodes.get(
+            link_data["target"],
+            [link_data["target"]]
+        )
+        for node in linked_nodes:
+          self.add_link(
+              link_data["source"],
+              node,
+              link_data["connection_type"]
+          )
+    except KeyError as e:
+      raise vt_graph_api.errors.WrongJSONError(
+          "Unexpected error in json structure at" +
+          "_add_links_from_json_graph_data: {msg}"
+          .format(msg=str(e))
+      )
+
   def connect_with_graph(self, source_node, max_api_quotas=100000,
                          max_depth=3, max_qps=1000,
                          fetch_info_collected_nodes=True):
@@ -1358,7 +1460,7 @@ class VTGraph(object):
 
     source_node = self.nodes[source_node]
     target_nodes = [
-        node for node in self.nodes.values()
+        node for node in six.itervalues(self.nodes)
         if node.node_type in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES
     ]
 
@@ -1401,7 +1503,7 @@ class VTGraph(object):
     del self.nodes[node_id]
 
   def has_node(self, node_id):
-    """Check if graph contains the node with the given node_id.
+    """Check if the graph contains the node with the given node_id.
 
     Args:
         node_id (str): node ID.
@@ -1409,7 +1511,7 @@ class VTGraph(object):
     Returns:
         bool: whether the graph contains the node with the given node_id.
 
-    This call consumes API quota if the given node_id is not a standard vt id.
+    This call consumes API quota if the given node_id is not a standard VT id.
     """
     node_id = self._get_node_id(node_id)
     if node_id not in self.nodes:
@@ -1434,41 +1536,23 @@ class VTGraph(object):
     )
 
   @staticmethod
-  def from_graph_id(graph_id, api_key):
-    """Load the graph using the given VirusTotal graph id.
+  def get_graph_viewers(graph_id, api_key):
+    """Return user and group viewers for the graph with the given graph_id.
 
     Args:
       graph_id (str): VT Graph ID.
       api_key (str): VT API key.
 
     Raises:
-      vt_graph_api.errors.LoaderError: whether the given graph_id cannot be
-        found or JSON does not have the correct structure.
+      vt_graph_api.errors.WrongJSONError: whether the API response does not have
+        the correct structure.
 
     Returns:
-      VTGraph: the imported graph.
+      ([str], [str]): user and group viewers respectively.
     """
-    graph = None
+    user_viewers = []
+    group_viewers = []
     headers = {"x-apikey": api_key, "x-tool": vt_graph_api.version.__x_tool__}
-
-    # check if user has editor permissions
-
-    # Get graph data
-    graph_data_url = (
-        "https://www.virustotal.com/api/v3/graphs/{graph_id}"
-        .format(graph_id=graph_id)
-    )
-    graph_data_response = requests.get(graph_data_url, headers=headers)
-    if graph_data_response.status_code != 200:
-      raise vt_graph_api.errors.LoaderError(
-          "Error to find graph with id: {graph_id}. Response code: {status_code}"
-          .format(
-              graph_id=graph_id,
-              status_code=graph_data_response.status_code
-          )
-      )
-
-    # Get graph viewers
     has_viewers = True
     viewers_data_url = (
         "https://www.virustotal.com/api/v3/graphs/{graph_id}/relationships/viewers"
@@ -1477,8 +1561,39 @@ class VTGraph(object):
     viewers_data_response = requests.get(viewers_data_url, headers=headers)
     if viewers_data_response.status_code != 200:
       has_viewers = False
+    if has_viewers:
+      try:
+        viewers_data = viewers_data_response.json()
+        for viewer in viewers_data["data"]:
+          if viewer["type"] == "group":
+            group_viewers.append(viewer["id"])
+          else:
+            user_viewers.append(viewer["id"])
+      except KeyError as e:
+        raise vt_graph_api.errors.WrongJSONError(
+            "Unexpected error in json structure at get_graph_viewers: {msg}"
+            .format(msg=str(e))
+        )
+    return user_viewers, group_viewers
 
-    # Get graph editors
+  @staticmethod
+  def get_graph_editors(graph_id, api_key):
+    """Return user and group editors for the graph with the given graph_id.
+
+    Args:
+      graph_id (str): VT Graph ID.
+      api_key (str): VT API key.
+
+    Raises:
+      vt_graph_api.errors.WrongJSONError: whether the API response does not have
+        the correct structure.
+
+    Returns:
+      ([str], [str]): user and group editors respectively.
+    """
+    user_editors = []
+    group_editors = []
+    headers = {"x-apikey": api_key, "x-tool": vt_graph_api.version.__x_tool__}
     has_editors = True
     editors_data_url = (
         "https://www.virustotal.com/api/v3/graphs/{graph_id}/relationships/editors"
@@ -1487,34 +1602,65 @@ class VTGraph(object):
     editors_data_response = requests.get(editors_data_url, headers=headers)
     if editors_data_response.status_code != 200:
       has_editors = False
-
-    # Decode data and creates graph
-    try:
-      user_viewers = []
-      group_viewers = []
-      user_editors = []
-      group_editors = []
-      data = graph_data_response.json()
-      graph_name = data["data"]["attributes"]["graph_data"]["description"]
-      private = data["data"]["attributes"]["private"]
-      nodes = data["data"]["attributes"]["nodes"]
-      links = data["data"]["attributes"]["links"]
-      # Set viewers
-      if has_viewers:
-        viewers_data = viewers_data_response.json()
-        for viewer in viewers_data["data"]:
-          if viewer["type"] == "group":
-            group_viewers.append(viewer["id"])
-          else:
-            user_viewers.append(viewer["id"])
-      # Set editors
-      if has_editors:
+    if has_editors:
+      try:
         editors_data = editors_data_response.json()
         for editor in editors_data["data"]:
           if editor["type"] == "group":
             group_editors.append(editor["id"])
           else:
             user_editors.append(editor["id"])
+      except KeyError as e:
+        raise vt_graph_api.errors.WrongJSONError(
+            "Unexpected error in json structure at get_graph_editors: {msg}"
+            .format(msg=str(e))
+        )
+    return user_editors, group_editors
+
+  @staticmethod
+  def from_graph_id(graph_id, api_key):
+    """Load the graph using the given VirusTotal graph id.
+
+    Args:
+      graph_id (str): VT Graph ID.
+      api_key (str): VT API key.
+
+    Raises:
+      vt_graph_api.errors.LoadError: whether the given graph_id cannot be
+        found or JSON does not have the correct structure.
+
+    Returns:
+      VTGraph: the imported graph.
+    """
+    graph = None
+    headers = {"x-apikey": api_key, "x-tool": vt_graph_api.version.__x_tool__}
+
+    # Get graph data
+    graph_data_url = (
+        "https://www.virustotal.com/api/v3/graphs/{graph_id}"
+        .format(graph_id=graph_id)
+    )
+    graph_data_response = requests.get(graph_data_url, headers=headers)
+    if graph_data_response.status_code != 200:
+      raise vt_graph_api.errors.LoadError(
+          "Error to find graph with id: {graph_id}. Response code: {status_code}"
+          .format(
+              graph_id=graph_id,
+              status_code=graph_data_response.status_code
+          )
+      )
+
+    try:
+      data = graph_data_response.json()
+      graph_name = data["data"]["attributes"]["graph_data"]["description"]
+      private = data["data"]["attributes"]["private"]
+      nodes = data["data"]["attributes"]["nodes"]
+      links = data["data"]["attributes"]["links"]
+      # Get graph viewers
+      user_viewers, group_viewers = VTGraph.get_graph_viewers(graph_id, api_key)
+      # Get graph editors
+      user_editors, group_editors = VTGraph.get_graph_editors(graph_id, api_key)
+
       # Create empty graph
       graph = vt_graph_api.graph.VTGraph(
           api_key=api_key,
@@ -1526,58 +1672,18 @@ class VTGraph(object):
           group_viewers=group_viewers,
       )
       graph.graph_id = graph_id
+      # Adds nodes to the graph
+      graph._add_nodes_from_json_graph_data(nodes)
+      # Adds links to the graph
+      graph._add_links_from_json_graph_data(links)
 
-      # Adds nodes
-      suitable_nodes = (
-          node for node in nodes if node["type"] != "relationship"
+    except KeyError as e:
+      raise vt_graph_api.errors.LoadError(
+          "Unexpected error in json structure at from_graph_id: {msg}"
+          .format(msg=str(e))
       )
-      nodes_to_add = []
-      for node_data in suitable_nodes:
-        node_type = node_data["type"]
-        if node_type not in vt_graph_api.node.Node.SUPPORTED_NODE_TYPES:
-          node_type = node_data["entity_attributes"]["custom_type"]
-        nodes_to_add.append({
-            "node_id": node_data["entity_id"],
-            "node_type": node_type,
-            "label": node_data.get("text", ""),
-            "attributes": node_data.get("entity_attributes"),
-            "x_position": node_data["x"],
-            "y_position": node_data["y"]
-        })
-      # Add all nodes concurrently
-      graph.add_nodes(nodes_to_add, False, False)
+    except vt_graph_api.errors.WrongJSONError as e:
+      raise vt_graph_api.errors.LoadError(str(e))
 
-      # It is necessary to clean the given links because they have relationship
-      # nodes
-      replace_nodes = {}
-      for link in (
-          link_ for link_ in links if link_["source"].startswith("relationship")
-      ):
-        if link["source"] not in replace_nodes:
-          replace_nodes[link["source"]] = [link["target"]]
-        else:
-          replace_nodes[link["source"]].append(link["target"])
-
-      suitable_links = (
-          link
-          for link in links
-          if not link["source"].startswith("relationship")
-      )
-
-      for link_data in suitable_links:
-        linked_nodes = replace_nodes.get(
-            link_data["target"],
-            [link_data["target"]]
-        )
-        for node in linked_nodes:
-          graph.add_link(
-              link_data["source"],
-              node,
-              link_data["connection_type"]
-          )
-
-    except KeyError:
-      raise vt_graph_api.errors.LoaderError("JSON wrong structure")
-
-    # return the imported graph
+    # Return the imported graph
     return graph

@@ -172,7 +172,7 @@ def test_load_from_id_without_editors_and_viewers(mocker):
 def test_load_from_id_with_fail_request(mocker):
   """Test load from id with errors."""
   with pytest.raises(
-      vt_graph_api.errors.LoaderError,
+      vt_graph_api.errors.LoadError,
       match=r"Error to find graph with id: DUMMY_ID. Response code: 400"
   ):
     mocker.patch("requests.get", return_value=mocker.Mock(status_code=400))
@@ -182,9 +182,7 @@ def test_load_from_id_with_fail_request(mocker):
 def test_load_from_id_with_wrong_json(mocker):
   """Test load from id with error in JSON structure."""
   with pytest.raises(
-      vt_graph_api.errors.LoaderError,
-      match=r"JSON wrong structure"
-  ):
+      vt_graph_api.errors.LoadError):
     side_effects = [
         GRAPH_WRONG_RESPONSE_DATA,
         VIEWERS_RESPONSE_DATA,
