@@ -1,6 +1,6 @@
 """vt_graph_api.errors.
 
-This modules provides all errors that could be thrown by
+This modules provides all errors that could be raised by
 the methods in vt_graph_api package.
 """
 

@@ -9,13 +9,9 @@ import vt_graph_api.graph
 
 
 with (
-    open(
-        os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "resources/virustotal_graph_id.json"
-        )
-    )
-) as fp:
+    open(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "resources/virustotal_graph_id.json"))) as fp:
   GRAPH_RESPONSE_DATA = json.load(fp)
 
 VIEWERS_RESPONSE_DATA = {
@@ -173,8 +169,7 @@ def test_load_from_id_with_fail_request(mocker):
   """Test load from id with errors."""
   with pytest.raises(
       vt_graph_api.errors.LoadError,
-      match=r"Error to find graph with id: DUMMY_ID. Response code: 400"
-  ):
+      match=r"Error to find graph with id: DUMMY_ID. Response code: 400"):
     mocker.patch("requests.get", return_value=mocker.Mock(status_code=400))
     vt_graph_api.graph.VTGraph.from_graph_id(GRAPH_ID, API_KEY)
 

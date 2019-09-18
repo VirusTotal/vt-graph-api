@@ -17,7 +17,7 @@ DOMAIN_RE = re.compile(r"^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$")
 
 
 class Node(object):
-  """Python object wraper for a the VT Graph Node representation.
+  """Python object wraper for the VT Graph Node representation.
 
   Attributes:
     node_id (str): node identifier.
@@ -81,16 +81,13 @@ class Node(object):
   }
 
   def __init__(self, node_id, node_type, x=0, y=0):
-    """Creates an instance of a graph object.
+    """Creates an instance of a node object.
 
     Args:
       node_id (str): node identifier.
       node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES
       x (int, optional): X coordinate for Node representation in VT Graph GUI.
       y (int, optional): Y coordinate for Node representation in VT Graph GUI.
-
-    Raises:
-      NodeNotSupportedTypeError: if node_type not in SUPPORTED_NODE_TYPES
     """
     self.node_id = node_id
     self.node_type = node_type
@@ -105,7 +102,7 @@ class Node(object):
     self.relationship_ids = {}
 
   def get_detections(self):
-    """Get node detections from attributes.
+    """Get the node detections from attributes.
 
     Returns:
       int: the number of detections.
@@ -115,8 +112,7 @@ class Node(object):
     else:
       return (
           self.attributes.get("last_analysis_stats", {}).get("malicious", 0) +
-          self.attributes.get("last_analysis_stats", {}).get("suspicious", 0)
-      )
+          self.attributes.get("last_analysis_stats", {}).get("suspicious", 0))
 
   @staticmethod
   def is_url(node_id):

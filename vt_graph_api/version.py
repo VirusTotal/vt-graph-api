@@ -1,6 +1,6 @@
 """vt_graph_api.version.
 
-This module provides module version information.
+This module provides version information.
 """
 
 

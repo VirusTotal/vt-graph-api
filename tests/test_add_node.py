@@ -1,18 +1,14 @@
 """Test add node to graph."""
 
 
+import requests
 import vt_graph_api
 import vt_graph_api.errors
 
 
 test_graph = vt_graph_api.VTGraph(
-    "Dummy api key",
-    verbose=False,
-    private=False,
-    name="Graph test",
-    user_editors=["jinfantes"],
-    group_viewers=["virustotal"]
-)
+    "Dummy api key", verbose=False, private=False, name="Graph test",
+    user_editors=["agfernandez"], group_viewers=["virustotal"])
 
 
 def test_add_node_file_sha256(mocker):
@@ -96,8 +92,7 @@ def test_add_node_domain(mocker):
   mocker.patch("requests.get", return_value=m)
   added_node_id = "google.com"
   added_node = test_graph.add_node(
-      added_node_id, "domain", label="Investigation node"
-  )
+      added_node_id, "domain", label="Investigation node")
   assert test_graph.nodes[added_node_id] == added_node
   mocker.resetall()
 
@@ -108,8 +103,7 @@ def test_add_node_ip(mocker):
   mocker.patch("requests.get", return_value=m)
   added_node_id = "104.17.38.137"
   added_node = test_graph.add_node(
-      added_node_id, "ip_address", label="Investigation node"
-  )
+      added_node_id, "ip_address", label="Investigation node")
   assert test_graph.nodes[added_node_id] == added_node
   mocker.resetall()
 
@@ -133,10 +127,12 @@ def test_add_node_with_fetch_vt_enterprise_search_and_found(mocker):
   mocker.patch("requests.get", return_value=m)
   added_node_id = "dummy file.bak"
   added_node = test_graph.add_node(
-      added_node_id, "file", label="Investigation node"
-  )
+      added_node_id, "file", label="Investigation node")
   assert not test_graph.nodes.get(added_node_id)
   assert test_graph.nodes[added_node.node_id] == added_node
+  url = "https://www.virustotal.com/api/v3/intelligence/search?query={query}".format(
+      query=added_node_id)
+  requests.get.assert_called_with(url, headers=test_graph._get_headers())
   mocker.resetall()
 
 
@@ -164,9 +160,11 @@ def test_add_node_with_fetch_vt_enterprise_search_and_not_found(mocker):
   mocker.patch("requests.get", return_value=m)
   added_node_id = "dummy file 2.bak"
   added_node = test_graph.add_node(
-      added_node_id, "file", label="Investigation node"
-  )
+      added_node_id, "file", label="Investigation node")
   assert test_graph.nodes[added_node_id] == added_node
+  url = "https://www.virustotal.com/api/v3/intelligence/search?query={query}".format(
+      query=added_node_id)
+  requests.get.assert_called_with(url, headers=test_graph._get_headers())
   mocker.resetall()
 
 
@@ -175,8 +173,7 @@ def test_add_nodes(mocker):
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value={}))
   mocker.patch("requests.get", return_value=m)
   added_node_id_1 = (
-      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
-  )
+      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa")
   added_node_type_1 = "file"
   added_node_id_2 = "dummy.com"
   added_node_type_2 = "domain"

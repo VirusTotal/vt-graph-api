@@ -7,13 +7,8 @@ import vt_graph_api.errors
 
 
 test_graph = vt_graph_api.VTGraph(
-    "Dummy api key",
-    verbose=False,
-    private=False,
-    name="Graph test",
-    user_editors=["jinfantes"],
-    group_viewers=["virustotal"]
-)
+    "Dummy api key", verbose=False, private=False, name="Graph test",
+    user_editors=["agfernandez"], group_viewers=["virustotal"])
 
 
 def test_save_graph(mocker):
@@ -27,11 +22,9 @@ def test_save_graph(mocker):
   mocker.patch("requests.post", return_value=m)
   mocker.patch.object(test_graph, "_fetch_information")
   added_node_id_a = (
-      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
-  )
+      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa")
   added_node_id_b = (
-      "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
-  )
+      "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16")
   test_graph.add_node(added_node_id_a, "file", label="Investigation node")
   test_graph.add_node(added_node_id_b, "file", label="Investigation node 2")
   test_graph.add_link(added_node_id_a, added_node_id_b, "similar_files")
@@ -75,7 +68,4 @@ def test_get_iframe():
   assert test_graph.get_iframe_code() == (
       "<iframe src=\"https://www.virustotal.com/graph/embed/" +
       "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
-      .format(
-          graph_id=graph_id
-      )
-  )
+      .format(graph_id=graph_id))
