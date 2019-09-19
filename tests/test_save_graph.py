@@ -20,7 +20,7 @@ def test_save_graph(mocker):
   }
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.post", return_value=m)
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   added_node_id_a = (
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa")
   added_node_id_b = (
@@ -28,8 +28,8 @@ def test_save_graph(mocker):
   test_graph.add_node(added_node_id_a, "file", label="Investigation node")
   test_graph.add_node(added_node_id_b, "file", label="Investigation node 2")
   test_graph.add_link(added_node_id_a, added_node_id_b, "similar_files")
-  mocker.patch.object(test_graph, "_add_editors")
-  mocker.patch.object(test_graph, "_add_viewers")
+  mocker.patch.object(test_graph, "_push_editors")
+  mocker.patch.object(test_graph, "_push_viewers")
   test_graph.save_graph()
   mocker.resetall()
 
@@ -37,7 +37,7 @@ def test_save_graph(mocker):
 def test_save_graph_collaborator_not_found(mocker):
   """Test save graph on VT with collaborators not found in VT."""
   with pytest.raises(vt_graph_api.errors.CollaboratorNotFoundError):
-    mocker.patch.object(test_graph, "_send_graph_to_vt")
+    mocker.patch.object(test_graph, "_push_graph_to_vt")
     test_graph.save_graph()
     mocker.resetall()
 
@@ -47,8 +47,8 @@ def test_save_graph_error(mocker):
   with pytest.raises(vt_graph_api.errors.SaveGraphError):
     m = mocker.Mock(status_code=400, json=mocker.Mock(return_value={}))
     mocker.patch("requests.post", return_value=m)
-    mocker.patch.object(test_graph, "_add_editors")
-    mocker.patch.object(test_graph, "_add_viewers")
+    mocker.patch.object(test_graph, "_push_editors")
+    mocker.patch.object(test_graph, "_push_viewers")
     test_graph.save_graph()
     mocker.resetall()
 

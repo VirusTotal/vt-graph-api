@@ -45,5 +45,5 @@ def test_delete_node_with_links(mocker):
 def test_delete_not_existing_node():
   """Test delete not existing node."""
   with pytest.raises(vt_graph_api.errors.NodeNotFoundError,
-                     match=r"node 'dummy id' not found in nodes"):
+                     match=r"Node 'dummy id' not found in nodes."):
     test_graph.delete_node("dummy id")

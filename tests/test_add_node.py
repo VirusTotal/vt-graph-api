@@ -35,7 +35,7 @@ def test_add_node_file_sha1(mocker):
           }
       }
   }
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
   node_id = "5ff465afaabcbf0150d1a3ab2c2e74f3a4426467"
@@ -55,7 +55,7 @@ def test_add_node_file_md5(mocker):
           }
       }
   }
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
   added_node_id = "84c82835a5d21bbcf75a61706d8ab549"
@@ -75,7 +75,7 @@ def test_add_node_url(mocker):
           "type": "analysis"
       }
   }
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.post", return_value=m)
   added_node_id = "http://cwwnhwhlz52maqm7.onion/"
@@ -122,7 +122,7 @@ def test_add_node_with_fetch_vt_enterprise_search_and_found(mocker):
           "total_hits": 1
       }
   }
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
   added_node_id = "dummy file.bak"
@@ -155,7 +155,7 @@ def test_add_node_with_fetch_vt_enterprise_search_and_not_found(mocker):
           "total_hits": 2
       }
   }
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.get", return_value=m)
   added_node_id = "dummy file 2.bak"

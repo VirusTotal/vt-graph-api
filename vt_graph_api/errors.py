@@ -9,6 +9,10 @@ class NodeNotFoundError(Exception):
   pass
 
 
+class LinkNotFoundError(Exception):
+  pass
+
+
 class NodeNotSupportedTypeError(Exception):
   pass
 

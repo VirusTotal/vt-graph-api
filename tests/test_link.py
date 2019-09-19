@@ -13,7 +13,7 @@ test_graph = vt_graph_api.VTGraph(
 
 def test_add_link(mocker):
   """Test add link."""
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   node_1 = test_graph.add_node(
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa",
       "file", label="Investigation node")
@@ -29,7 +29,7 @@ def test_add_link(mocker):
 def test_add_link_not_existing_node():
   """Test link between not existing nodes."""
   with pytest.raises(vt_graph_api.errors.NodeNotFoundError,
-                     match=r"node 'dummy id 1' not found in nodes"):
+                     match=r"Node 'dummy id 1' not found in nodes."):
     test_graph.add_link("dummy id 1", "dummy id 2", "compressed_parents")
 
 
@@ -38,7 +38,7 @@ def test_add_link_between_the_same_node():
   dummy_id = "dummy id"
   with pytest.raises(
       vt_graph_api.errors.SameNodeError,
-      match=r"it is no possible to add links between the same node; id: {gid}"
+      match=r"It is no possible to add links between the same node; id: {gid}."
       .format(gid=dummy_id)
   ):
     test_graph.add_link(dummy_id, dummy_id, "compressed_parents")
@@ -46,7 +46,7 @@ def test_add_link_between_the_same_node():
 
 def test_add_links_if_match(mocker):
   """Test add links if match."""
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   search_connection_response = [[(
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa",
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41cc",
@@ -69,7 +69,7 @@ def test_add_links_if_match(mocker):
 
 def test_add_links_if_match_link_already_exists(mocker):
   """Test add links if match if link already exists."""
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   node_1 = test_graph.add_node(
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa",
       "file", label="Investigation node")
@@ -88,7 +88,7 @@ def test_add_links_if_match_link_already_exists(mocker):
 def test_add_links_if_match_not_existing_node():
   """Test add links if match between not existing nodes."""
   with pytest.raises(vt_graph_api.errors.NodeNotFoundError,
-                     match=r"node 'dummy id 1' not found in nodes"):
+                     match=r"Node 'dummy id 1' not found in nodes."):
     test_graph.add_links_if_match("dummy id 1", "dummy id 2")
 
 
@@ -97,7 +97,7 @@ def test_add_links_if_match_between_the_same_node():
   dummy_id = "dummy id"
   with pytest.raises(
       vt_graph_api.errors.SameNodeError,
-      match=r"it is no possible to add links between the same node; id: {gid}"
+      match=r"It is no possible to add links between the same node; id: {gid}."
       .format(gid=dummy_id)
   ):
     test_graph.add_links_if_match(dummy_id, dummy_id, "compressed_parents")

@@ -104,6 +104,7 @@ def test_load_from_id_with_match(mocker):
     assert test_graph.links[(source, target, connection_type)]
   assert "virustotal" in test_graph.group_editors
   assert "alvarogf" in test_graph.user_viewers
+  mocker.resetall()
 
 
 def test_load_from_id_without_editors_and_viewers(mocker):
@@ -163,15 +164,17 @@ def test_load_from_id_without_editors_and_viewers(mocker):
     assert test_graph.links[(source, target, connection_type)]
   assert "virustotal" not in test_graph.group_editors
   assert "alvarogf" not in test_graph.user_viewers
+  mocker.resetall()
 
 
 def test_load_from_id_with_fail_request(mocker):
   """Test load from id with errors."""
   with pytest.raises(
       vt_graph_api.errors.LoadError,
-      match=r"Error to find graph with id: DUMMY_ID. Response code: 400"):
+      match=r"Error to find graph with id: DUMMY_ID. Response code: 400."):
     mocker.patch("requests.get", return_value=mocker.Mock(status_code=400))
     vt_graph_api.graph.VTGraph.from_graph_id(GRAPH_ID, API_KEY)
+  mocker.resetall()
 
 
 def test_load_from_id_with_wrong_json(mocker):
@@ -186,3 +189,4 @@ def test_load_from_id_with_wrong_json(mocker):
     m = mocker.Mock(status_code=200, json=mocker.Mock(side_effect=side_effects))
     mocker.patch("requests.get", return_value=m)
     vt_graph_api.graph.VTGraph.from_graph_id(GRAPH_ID, API_KEY)
+  mocker.resetall()

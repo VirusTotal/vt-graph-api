@@ -100,7 +100,7 @@ def test_get_expansion_nodes_n_level_without_cursor(mocker):
 
 def test_expansion_existing_node(mocker):
   """Test expansion existing node in graph."""
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   rq_id = "fb0b6044347e972e21b6c376e37e1115dab494a2c6b9fb28b92b1e45b45d0ebc"
   first_level = {
       "data": [
@@ -131,20 +131,20 @@ def test_expansion_existing_node(mocker):
 def test_expand_not_existing_node():
   """Test expansion not existing node."""
   with pytest.raises(vt_graph_api.errors.NodeNotFoundError,
-                     match=r"node 'dummy id' not found in nodes"):
+                     match=r"Node 'dummy id' not found in nodes."):
     test_graph.expand("dummy id", "compressed_parents", 40)
 
 
 def test_not_supported_expansion(mocker):
   """Test not suported expansion type."""
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   added_node_id = (
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa")
   test_graph.add_node(added_node_id, "file",
                       label="Investigation node")
   expansion = "dummy expansion"
   with pytest.raises(vt_graph_api.errors.NodeNotSupportedExpansionError,
-                     match=r"node %s cannot be expanded with %s expansion" %
+                     match=r"Node %s cannot be expanded with %s expansion." %
                      (added_node_id, expansion)):
     test_graph.expand(added_node_id, expansion, 40)
   mocker.resetall()
@@ -152,7 +152,7 @@ def test_not_supported_expansion(mocker):
 
 def test_expand_one_level_existing_node(mocker):
   """Test expand one level for existing node."""
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   added_node_id = (
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa")
   added_node = test_graph.add_node(added_node_id, "file",
@@ -167,13 +167,13 @@ def test_expand_one_level_existing_node(mocker):
 def test_expand_one_level_not_existing_node():
   """Test expand one level for not existing node."""
   with pytest.raises(vt_graph_api.errors.NodeNotFoundError,
-                     match=r"node 'dummy id' not found in nodes"):
+                     match=r"Node 'dummy id' not found in nodes."):
     test_graph.expand_one_level("dummy id", 40)
 
 
 def test_expand_n_level(mocker):
   """Test expand graph n levels."""
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   test_graph.add_node(
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa",
       "file", label="Investigation node")
