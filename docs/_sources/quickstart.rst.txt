@@ -24,7 +24,7 @@ Creates a new graph (replace **<apikey>** with your Actual Virustotal API key):
 Nodes
 ==========================
 
-Node is the minimum unit of graph information. There's some basic node types, however sometimes it's difficult to 
+Node is the minimum unit of graph information. There's some basic node types, however it's sometimes difficult to 
 represent our own node, so we can specify any type such as "actor" or "email". The basic node types
 are the following:
 
