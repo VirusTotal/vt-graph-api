@@ -1,4 +1,4 @@
-"""Simple VTGraph usage example."""
+"""Basic VTGraph usage example."""
 
 
 from vt_graph_api import VTGraph

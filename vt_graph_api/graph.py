@@ -4,11 +4,7 @@ This module provides the Python object wrapper for
 VirusTotal Graph representation.
 
 Documentation:
-  https://developers.virustotal.com/v3.0/docs/api-documentation
-
-Examples:
-  https://developers.virustotal.com/v3.0/docs/simple-tutorials
-  https://developers.virustotal.com/v3.0/docs/advanced-tutorials
+  VT API: https://developers.virustotal.com/v3.0/docs/api-documentation
 """
 
 
@@ -416,7 +412,7 @@ class VTGraph(object):
     """Push graph's viewers to VT.
 
     Raises:
-      CollaboratorNotFound: if any of the collaborators does not exist.
+      CollaboratorNotFoundError: if any of the collaborators does not exist.
     """
     data = []
     for editor in self.user_viewers:
@@ -480,7 +476,7 @@ class VTGraph(object):
     """Push graph's editors to VT.
 
     Raises:
-      CollaboratorNotFound: if any of the collaborators does not exist.
+      CollaboratorNotFoundError: if any of the collaborators does not exist.
     """
     data = []
     for editor in self.user_editors:
@@ -1173,7 +1169,7 @@ class VTGraph(object):
     del self.nodes[node_id]
 
   def add_link(self, source_node, target_node, connection_type):
-    """Adds a link between source_node and target_node with the connection_type.
+    """Adds a link between source_node and target_node with the given connection_type.
 
     If the source or target node don"t exist, an exception will be raised.
 
@@ -1481,7 +1477,7 @@ class VTGraph(object):
     VirusTotal UI.
 
     Raises:
-      CollaboratorNotFound: if any of the collaborators is not found in
+      CollaboratorNotFoundError: if any of the collaborators is not found in
         VirusTotal user and group database.
       SaveGraphError: if something went bad when saving the graph.
 
