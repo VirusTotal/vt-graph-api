@@ -413,29 +413,29 @@ class VTGraph(object):
       WrongJSONError: whether the API response does not have the correct
         structure.
     """
+    if not self.graph_id:
+      return
+
     user_viewers = []
     group_viewers = []
-    if self.graph_id:
-      has_viewers = True
-      viewers_data_url = (
-          "https://www.virustotal.com/api/v3/graphs/{graph_id}"
-          .format(graph_id=self.graph_id) + "/relationships/viewers")
-      viewers_data_response = requests.get(
-          viewers_data_url, headers=self._get_headers)
-      if viewers_data_response.status_code != 200:
-        has_viewers = False
-      if has_viewers:
-        try:
-          viewers_data = viewers_data_response.json()
-          for viewer in viewers_data["data"]:
-            if viewer["type"] == "group":
-              group_viewers.append(viewer["id"])
-            else:
-              user_viewers.append(viewer["id"])
-        except KeyError as e:
-          raise vt_graph_api.errors.WrongJSONError(
-              "Unexpected error in json structure at get_graph_viewers: {msg}"
-              .format(msg=str(e)))
+    viewers_data_url = (
+        "https://www.virustotal.com/api/v3/graphs/{graph_id}"
+        .format(graph_id=self.graph_id) + "/relationships/viewers")
+    viewers_data_response = requests.get(
+        viewers_data_url, headers=self._get_headers)
+    if viewers_data_response.status_code != 200:
+      return
+    try:
+      viewers_data = viewers_data_response.json()
+      for viewer in viewers_data["data"]:
+        if viewer["type"] == "group":
+          group_viewers.append(viewer["id"])
+        else:
+          user_viewers.append(viewer["id"])
+    except KeyError as e:
+      raise vt_graph_api.errors.WrongJSONError(
+          "Unexpected error in json structure at get_graph_viewers: {msg}"
+          .format(msg=str(e)))
     self.user_viewers.extend(user_viewers)
     self.group_viewers.extend(group_viewers)
 
@@ -477,28 +477,29 @@ class VTGraph(object):
       WrongJSONError: whether the API response does not have the correct
         structure.
     """
+    if not self.graph_id:
+      return
+
     user_editors = []
     group_editors = []
-    has_editors = True
     editors_data_url = (
         "https://www.virustotal.com/api/v3/graphs/{graph_id}"
         .format(graph_id=self.graph_id) + "/relationships/editors")
     editors_data_response = requests.get(
         editors_data_url, headers=self._get_headers())
     if editors_data_response.status_code != 200:
-      has_editors = False
-    if has_editors:
-      try:
-        editors_data = editors_data_response.json()
-        for editor in editors_data["data"]:
-          if editor["type"] == "group":
-            group_editors.append(editor["id"])
-          else:
-            user_editors.append(editor["id"])
-      except KeyError as e:
-        raise vt_graph_api.errors.WrongJSONError(
-            "Unexpected error in json structure at get_graph_editors: {msg}"
-            .format(msg=str(e)))
+      return
+    try:
+      editors_data = editors_data_response.json()
+      for editor in editors_data["data"]:
+        if editor["type"] == "group":
+          group_editors.append(editor["id"])
+        else:
+          user_editors.append(editor["id"])
+    except KeyError as e:
+      raise vt_graph_api.errors.WrongJSONError(
+          "Unexpected error in json structure at get_graph_editors: {msg}"
+          .format(msg=str(e)))
 
     self.user_editors.extend(user_editors)
     self.group_editors.extend(group_editors)
@@ -551,14 +552,7 @@ class VTGraph(object):
       url = "https://www.virustotal.com/api/v3/graphs"
       response = requests.post(
           url, headers=self._get_headers(), data=json.dumps(output))
-    if response.status_code == 200:
-      data = response.json()
-      if "data" in data:
-        self.graph_id = data["data"]["id"]
-      else:
-        self._log("Saving graph error: {data}".format(data=data))
-        raise vt_graph_api.errors.SaveGraphError(str(data))
-    else:
+    if response.status_code != 200:
       self._log(
           "Saving graph error: {status_code} status code."
           .format(status_code=response.status_code))
@@ -567,6 +561,12 @@ class VTGraph(object):
           .format(status_code=response.status_code)
       )
 
+    data = response.json()
+    if "data" not in data:
+      self._log("Saving graph error: {data}".format(data=data))
+      raise vt_graph_api.errors.SaveGraphError(str(data))
+    self.graph_id = data["data"]["id"]
+    
   def _fetch_node_information(self, node):
     """Fetch VT to get the node information.
 
@@ -579,15 +579,16 @@ class VTGraph(object):
     end_point = self._get_api_endpoint(node.node_type)
     url = "https://www.virustotal.com/api/v3/{end_point}/{node_id}".format(
         end_point=end_point, node_id=node.node_id)
-    response = requests.get(url, headers=self._get_headers())
     self._increment_api_counter()
-    if response.status_code == 200:
-      data = response.json()
-    else:
+    response = requests.get(url, headers=self._get_headers())
+    if response.status_code != 200:
       self._log(
           "Request to '{url}' with '{status_code}' status code"
           .format(url=url, status_code=response.status_code)
       )
+      return
+
+    data = response.json()
     if "data" in data and "attributes" in data.get("data"):
       node.add_attributes(data["data"]["attributes"])
 
@@ -610,18 +611,16 @@ class VTGraph(object):
           node for node in nodes
           if node.node_id not in calculated_nodes)
       for node_ in not_visited_node:
-        # The interesction between possible expansion of each node give
+        # The intersection between possible expansion of each node give
         # us the common expansions
         shared_expansions = (
             set(node.expansions_available)
             .intersection(set(node_.expansions_available)))
         # Two nodes could be minimized if they have the same children in the
         # same expansion and they have at least one child.
-        minimize_expansion = (
-            expansion for expansion in shared_expansions
-            if node.children[expansion])
-        for expansion in minimize_expansion:
-          if (collections.Counter(node.children[expansion]) ==
+        for expansion in shared_expansions:
+          if (node.children[expansion] and
+              collections.Counter(node.children[expansion]) ==
               collections.Counter(node_.children[expansion])):
             to_minimize.append((node_, expansion))
 
@@ -635,7 +634,7 @@ class VTGraph(object):
             not node_to_minimize.relationship_ids.get(expansion)):
           relationship_id = "relationships_{expansion}_{node_id}".format(
               expansion=expansion,
-              node_id=vt_graph_api.node.Node.get_id(node.node_id))
+              node_id=vt_graph_api.node.Node.get_id_without_dots(node.node_id))
           node.relationship_ids[expansion] = relationship_id
           node_to_minimize.relationship_ids[expansion] = relationship_id
         elif not node.relationship_ids.get(expansion):
@@ -653,7 +652,7 @@ class VTGraph(object):
       for expansion in singles_expansion_relationship:
         relationship_id = "relationships_{expansion}_{node_id}".format(
             expansion=expansion,
-            node_id=vt_graph_api.node.Node.get_id(node.node_id))
+            node_id=vt_graph_api.node.Node.get_id_without_dots(node.node_id))
         node.relationship_ids[expansion] = relationship_id
 
   def _get_file_sha_256(self, node_id, is_filename=False):
@@ -682,17 +681,23 @@ class VTGraph(object):
       response = requests.get(url, headers=self._get_headers())
       if response.status_code == 200:
         data = response.json()
-        if (data.get("meta", dict()).get("total_hits", 0) == 1 and
-            data.get("data", [{"id": node_id}])[0].get("type", "") == "file"):
-          node_id = data.get("data", [{"id": node_id}])[0].get("id", node_id)
+        try:
+          total_hits = data.get("meta", dict()).get("total_hits", 0)
+          node_type = data["data"][0]["type"]
+          if (total_hits == 1 and node_type == "file"):
+            node_id = data["data"][0]["id"]
+        except KeyError:
+          pass
     else:
       url = "https://www.virustotal.com/api/v3/files/{node_id}".format(
           node_id=node_id)
       response = requests.get(url, headers=self._get_headers())
-      if response.status_code == 200:
-        data = response.json()
-        node_id = data.get("data", dict()).get(
-            "attributes", dict()).get("sha256", node_id)
+      if response.status_code != 200:
+        return node_id
+
+      data = response.json()
+      node_id = data.get("data", dict()).get(
+          "attributes", dict()).get("sha256", node_id)
 
     self._increment_api_counter()
     return node_id
@@ -751,19 +756,21 @@ class VTGraph(object):
         found = True
         valid_node_id = self._id_references[node_id]
 
-    if not found:
-      if vt_graph_api.node.Node.is_url(node_id):
-        valid_node_id = self._get_url_id(node_id)
-      elif (vt_graph_api.node.Node.is_sha1(node_id) or
-            vt_graph_api.node.Node.is_md5(node_id)):
-        valid_node_id = self._get_file_sha_256(node_id)
-      # If the node is totally unknow we will search it in intelligence
-      elif (not vt_graph_api.node.Node.is_domain(node_id) and
-            not vt_graph_api.node.Node.is_ipv4(node_id) and
-            not vt_graph_api.node.Node.is_sha256(node_id) and
-            fetch_vt_enterprise):
-        valid_node_id = self._get_file_sha_256(node_id, True)
-      self._id_references[node_id] = valid_node_id
+    if found:
+      return valid_node_id
+
+    if vt_graph_api.node.Node.is_url(node_id):
+      valid_node_id = self._get_url_id(node_id)
+    elif (vt_graph_api.node.Node.is_sha1(node_id) or
+          vt_graph_api.node.Node.is_md5(node_id)):
+      valid_node_id = self._get_file_sha_256(node_id)
+    # If the node is totally unknow we will search it in intelligence
+    elif (not vt_graph_api.node.Node.is_domain(node_id) and
+          not vt_graph_api.node.Node.is_ipv4(node_id) and
+          not vt_graph_api.node.Node.is_sha256(node_id) and
+          fetch_vt_enterprise):
+      valid_node_id = self._get_file_sha_256(node_id, True)
+    self._id_references[node_id] = valid_node_id
     return valid_node_id
 
   def _get_expansion_nodes(self, node, expansion,
@@ -824,9 +831,9 @@ class VTGraph(object):
         self._log(
             "Expanding node {node_id} with expansion {expansion}"
             .format(node_id=node.node_id, expansion=expansion))
+        self._increment_api_counter()
         response = requests.get(
             url, headers=self._get_headers(), timeout=self.REQUEST_TIMEOUT)
-        self._increment_api_counter()
         consumed_quotas += 1
         has_response = True
         if response.status_code == 200:
@@ -917,46 +924,48 @@ class VTGraph(object):
 
       has_quota = False
 
-      if depth + 1 < max_depth:
-        for expansion in expansions:
+      if depth + 1 >= max_depth:
+        return expansion_nodes
+
+      for expansion in expansions:
+        # Make this part thread safe.
+        with lock:
+          quotas_left = max_api_quotas.pop()
+          quotas_left -= 1
+          if quotas_left > -1:
+            has_quota = True
+          max_api_quotas.append(quotas_left)
+
+        if has_quota:
+          futures.append((
+              pool.submit(self._get_expansion_nodes, node, expansion, 40),
+              expansion))
+          has_quota = False
+        else:
+          break
+
+      for future, expansion in futures:
+
+        nodes, _ = future.result()
+        not_visited_nodes = (node for node in nodes
+                              if node not in visited_nodes)
+
+        for not_visited_node in not_visited_nodes:
           # Make this part thread safe.
           with lock:
-            quotas_left = max_api_quotas.pop()
-            quotas_left -= 1
-            if quotas_left > -1:
-              has_quota = True
-            max_api_quotas.append(quotas_left)
-
-          if has_quota:
-            futures.append((
-                pool.submit(self._get_expansion_nodes, node, expansion, 40),
-                expansion))
-            has_quota = False
-          else:
-            break
-
-        for future, expansion in futures:
-
-          nodes, _ = future.result()
-          not_visited_nodes = (node for node in nodes
-                               if node not in visited_nodes)
-
-          for not_visited_node in not_visited_nodes:
-            # Make this part thread safe.
-            with lock:
-              if not_visited_node in target_nodes:
-                path.append((
-                    node.node_id, not_visited_node.node_id, expansion,
-                    not_visited_node.node_type))
-                solution_paths.append(path)
-                target_nodes.remove(not_visited_node)
-              else:
-                expansion_nodes[not_visited_node] = ((
-                    path + [(node.node_id,
-                             not_visited_node.node_id,
-                             expansion,
-                             not_visited_node.node_type)],
-                    depth + 1))
+            if not_visited_node in target_nodes:
+              path.append((
+                  node.node_id, not_visited_node.node_id, expansion,
+                  not_visited_node.node_type))
+              solution_paths.append(path)
+              target_nodes.remove(not_visited_node)
+            else:
+              expansion_nodes[not_visited_node] = ((
+                  path + [(node.node_id,
+                            not_visited_node.node_id,
+                            expansion,
+                            not_visited_node.node_type)],
+                  depth + 1))
     return expansion_nodes
 
   def _search_connection(self, source_node, target_nodes,

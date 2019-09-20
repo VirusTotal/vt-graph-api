@@ -110,9 +110,8 @@ class Node(object):
     if self.attributes.get("has_detections"):
       return self.attributes["has_detections"]
     else:
-      return (
-          self.attributes.get("last_analysis_stats", {}).get("malicious", 0) +
-          self.attributes.get("last_analysis_stats", {}).get("suspicious", 0))
+      stats = self.attributes.get("last_analysis_stats", {})
+      return stats.get("malicious", 0) + stats.get("suspicious", 0)
 
   @staticmethod
   def is_url(node_id):
@@ -240,7 +239,7 @@ class Node(object):
     return hash(self.node_id)
 
   @staticmethod
-  def get_id(node_id):
+  def get_id_without_dots(node_id):
     """Return the given node_id without dots.
 
     Args:
