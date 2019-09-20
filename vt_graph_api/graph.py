@@ -80,7 +80,7 @@ class VTGraph(object):
     return vt_user in graph.user_editors or vt_user in graph.group_editors
 
   @staticmethod
-  def from_graph_id(graph_id, api_key):
+  def load_graph(graph_id, api_key):
     """Load the graph using the given VirusTotal graph id.
 
     Args:
@@ -128,23 +128,54 @@ class VTGraph(object):
 
     except KeyError as e:
       raise vt_graph_api.errors.LoadError(
-          "Unexpected error in json structure at from_graph_id: {msg}."
+          "Unexpected error in json structure at load_graph: {msg}."
           .format(msg=str(e)))
     except vt_graph_api.errors.WrongJSONError as e:
       raise vt_graph_api.errors.LoadError(str(e))
 
     return graph
 
-  def __init__(
-      self,
-      api_key,
-      name="",
-      private=False,
-      user_editors=None,
-      user_viewers=None,
-      group_editors=None,
-      group_viewers=None,
-      verbose=False):
+  @staticmethod
+  def clone_graph(graph_id, api_key, name="", private=False, user_editors=None,
+                  user_viewers=None, group_editors=None, group_viewers=None):
+    """Clone VirusTotal Graph and make it yours according the given parameters.
+
+    Args:
+      graph_id (str): VirusTotal Graph ID.
+      api_key (str): VT API Key
+      name (str, optional): graph title. Defaults to "".
+      private (bool, optional): true for private graphs. You need to have
+        Private Graph premium feature enabled in your subscription. Defaults
+        to False.
+      user_editors ([str], optional): usernames that can edit the graph.
+        Defaults to None.
+      user_viewers ([str], optional): usernames that can view the graph.
+        Defaults to None.
+      group_editors ([str], optional): groups that can edit the graph.
+        Defaults to None.
+      group_viewers ([str], optional): groups that can view the graph.
+        Defaults to None.
+
+    Raises:
+      vt_graph_api.errors.LoadError: whether the given graph_id cannot be
+        found or JSON does not have the correct structure.
+
+    Returns:
+      VTGraph: the cloned graph.
+    """
+    graph = VTGraph.load_graph(graph_id, api_key)
+    graph.private = private
+    graph.graph_id = ""
+    graph.name = name
+    graph.user_editors = user_editors or []
+    graph.user_viewers = user_viewers or []
+    graph.group_editors = group_editors or []
+    graph.group_viewers = group_viewers or []
+    return graph
+
+  def __init__(self, api_key, name="", private=False, user_editors=None,
+               user_viewers=None, group_editors=None, group_viewers=None,
+               verbose=False):
     """Creates a VT Graph Instance.
 
     Args:
@@ -875,7 +906,6 @@ class VTGraph(object):
         third element: node's depth relative to first node
           which started the search.
     """
-
     path, depth = params
 
     futures = []

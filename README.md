@@ -18,15 +18,12 @@ pip install . --user
 X.X.X
 ```
 
-# Documentation
+## Documentation
 
-https://developers.virustotal.com/v3.0/docs/api-documentation
+For more information about how to use **vt_graph_api** visit the [documentation](https://virustotal.github.io/vt-graph-api/) page.
 
-
-# Tutorials
-
-https://developers.virustotal.com/v3.0/docs/simple-tutorials  
-https://developers.virustotal.com/v3.0/docs/advanced-tutorials
+You may also want to take a look at some of our [example scripts](https://github.com/VirusTotal/vt-graph-api/tree/master/examples),
+which besides doing useful work for you can be used as a guidance on how to use **vt_graph_api**.
 
 # Test it!
 
@@ -44,4 +41,5 @@ Use tox to test:
 - Accept **MD5** and **SHA1** as valid ID for nodes with **file type**.
 - Added **VTIntelligence** search for nodes without any information.
 - Accept custom node types.
-- Added load graph from **virustotal graph id**.
+- Added load graph from VirusTotal.
+- Added clone graph from VirusTotal.

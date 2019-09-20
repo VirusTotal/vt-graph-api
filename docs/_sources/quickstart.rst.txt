@@ -1,0 +1,365 @@
+**************
+Quickstart
+**************
+
+Basic usage
+==========================
+
+Start by importing the **vt_graph_api** module:
+
+.. code-block:: python
+
+  >>> import vt_graph_api
+
+Creates a new graph (replace **<apikey>** with your Actual Virustotal API key):
+
+.. code-block:: python
+
+  >>> graph = vt_graph_api.VTGraph("<apikey>", name="My Graph", private=True, user_viewers=['alvarogf'])
+
+.. note::
+
+  **Private graphs** are only allowed for premium users.
+
+Nodes
+==========================
+
+Node is the minimum unit of graph information. There's some basic node types, however sometimes it's difficult to 
+represent our own node, so we can specify any type such as "actor" or "email". The basic node types
+are the following:
+
+  + file
+  + domain
+  + ip_address
+  + url
+
+The difference between basic nodes and custom nodes is that the first ones could be expanded
+and linked using VirusTotal API. Custom nodes can only be linked using **manual** link.
+
+
+Adding Node
+-------------------
+
+.. warning::
+
+  Adding a file node with no sha256 hash, url node with raw URL instead of an VirusTotal URL identifier or unknown
+  ID with **fetch_vt_enrerprise** option, consumes API quota.
+
+We can either add a basic node:
+
+.. code-block:: python
+
+  >>> graph.add_node("www.virustotal.com", "domain", label="mynode")
+
+Or our own custom type:
+
+.. code-block:: python
+
+  >>> graph.add_node("alvarogf", "victim", label="mynode")
+
+We also can specify that we want to fetch information about the node we are adding by setting **fetch_information** to True:
+
+.. code-block:: python
+
+  >>> graph.add_node("www.virustotal.com", "domain", fetch_information=True, label="mynode")
+
+Moreover, in case that we need to search it on VirusTotal Intelligence, we can set **fetch_vt_enterprise** to True.
+
+.. note::
+
+  **fetch_vt_enterprise** flag is only available for premium users.
+
+If we want to add some nodes at the same time we also can use **add_nodes**, this function
+receive a node list which is a list of dictionaries with the following structure:
+
+.. code-block:: python
+
+  node_list = [
+      ...
+      {
+        "node_id" = "www.virustotal.com",
+        "node_type" = "domain",
+        "label" = "mynode",   # This attribute is optional. 
+        "attributes" = "",  # This attribute is optional. 
+        "x_position" = "", # This attribute is optional. 
+        "y_position" = ""  # This attribute is optional. 
+      },
+      ...
+  ]
+
+  >>> graph.add_nodes(node_list, fetch_information=True, fetch_vt_enterprise=True)
+
+.. seealso:: For advanced usage, please check **API Reference**.
+
+.. warning::
+
+  Setting **fetch_vt_enterprise** or **fetch_information** to True, consumes API quota.
+
+Deleting Node
+-------------------
+
+.. code-block:: python
+
+  graph.delete_node("www.virustotal.com")
+
+This function will raise **NodeNotFoundError** if the given node id not belongs to the graph.
+
+.. note::
+
+  This function also delete every link which have relation with the deleted node.
+
+Checking if node id belongs to graph
+--------------------------------------
+
+It is possible to check if graph has a node id using:
+
+.. code-block:: python
+
+  >>> graph.has_node("www.virustotal.com")
+  False
+
+
+Links
+==========================
+
+Link is a connection between two nodes which represents how and why they are connected.
+
+.. note::
+
+  You can check all possible connection types `here <https://www.google.com>`_.
+    
+Adding link
+-------------------
+
+We can add link between two nodes by specifying the nodes and the **connection type**. 
+If any of the specified nodes are custom, then the connection type must always be **manual**.
+
+.. code-block:: python
+
+  >>> graph.add_link("85ce324b8f78021ecfc9b811c748f19b82e61bb093ff64f2eab457f9ef19b186",
+  >>>                "3f3a9dde96ec4107f67b0559b4e95f5f1bca1ec6cb204bfe5fea0230845e8301", 
+  >>>                "bundled_files")
+
+.. note::
+
+  This call may raise **NodeNotFoundError** if any of the given node ids not found in 
+  graph. It is also possible to raise **SameNodeError** if source and target nodes 
+  are the same.
+
+
+Adding link using autoexploring
+------------------------------------
+
+Sometimes we want to link two nodes if they have at least one relationship, for this cases it is possible to
+use:
+
+.. code-block:: python
+
+  >>> graph.add_links_if_match("source_id", "target_id")
+  True
+
+This function uses VirusTotal API to expand nodes in order to find the relationship. If the 
+relationship has been founded, then return True, otherwise False.
+
+.. warning::
+
+  This call may consumes a lot of API quotas. If it is necessary set **max_api_quotas** and
+  **max_depth** to ensure that this function does not consumes more quotas than we want.
+
+Connecting node with whole graph
+-----------------------------------
+
+It is possible to autoexplore the graph expanding their nodes for the purpose to find a connection 
+between a given node and them:
+
+.. code-block:: python
+
+  >>> graph.connect_with_graph("my node")
+  True
+
+.. warning::
+
+  This call may consumes a lot of API quotas. If it is necessary set **max_api_quotas** and
+  **max_depth** to ensure that this function does not consumes more quotas than we want.
+
+Deleting link
+-------------------
+
+Yoy can either delete a single link:
+
+.. code-block::
+
+  >>> graph.delete_link("source_id", "target_id", "connection_type")
+
+or delete all the links in which node is involved:
+
+.. code-block::
+
+  >>> graph.delete_links("source_id")
+
+.. seealso::
+
+  Please check the **API Reference** to take more information about the errors that could be 
+  raised by this methods.
+
+Expansions
+==========================
+
+As it has been mentioned earlier, the nodes have some expansions. These expansions are all the knowledge
+that we have about how and why nodes could be linked in VirusTotal.
+
+Expanding node giving expansion
+---------------------------------
+
+There is file node with the hash **7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2** and we 
+want to know the domains that the file is contacted on, so we can use VirusTotal API to get this knowledge by 
+expanding the file node using **contacted_domains** as expansion type.
+
+.. code-block:: python
+
+  >>> graph.expand("7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2", "contacted_domains")
+
+This method adds to graph all the necessary nodes and links.
+
+.. note::
+
+  It is possible to specify the maximum number of nodes that we have as the result of the expansion by setting
+  **max_nodes_per_relationship** parameter.
+
+.. warning::
+
+  This call consumes API quota as much as **max_nodes_per_relationship/40**.
+
+
+.. seealso:: Please check API Reference for more information.
+
+Expanding node one level
+-----------------------------
+
+Sometimes we only want to expand a node in all his expansion types:
+
+.. code-block:: python
+
+  >>> graph.expand_one_level("7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2", max_nodes_per_relationship=10)
+
+.. warning::
+
+  This call consumes API quota as much as **the number of node's expansions * max_nodes_per_relationship/40**.
+
+Expanding the whole graph
+-----------------------------
+
+Alternatively we can expand the whole graph all the levels that we want:
+
+.. code-block:: python
+
+  >>> graph.expand_n_level(level=2)
+
+
+.. note::
+
+  As the methods before, we can specify **max_nodes_per_relationship** and **max_nodes** to ensure that we will not take
+  more nodes than necessary.
+
+.. warning::
+
+  This call consumes API quota as much as **the number of total expansion of each graph node * max_nodes_per_relationship/40**.
+  
+.. seealso:: Please see API Reference for more information.
+
+Save
+=============
+
+Once our graph is finish we can save it in VirusTotal:
+
+.. code-block:: python
+
+  >>> graph.save_graph()
+
+.. note::
+
+   At this point if the Graph is set to public it will be searchable in VirusTotal UI.
+
+
+Load
+=============
+
+We can recover VirusTotal Graph if we have his **ID**:
+
+.. code-block:: python
+
+  >>> vt_graph_api.VTGraph.load_graph("<graphid>", "<apikey>")
+
+If the user asociated to the given API key does not have viewer permissions we cannot retrieve the graph even we 
+know the ID, moreover if we does not have editors permissions we will not be able to save the graph.
+
+.. seealso:: Please see also **clone_graph** method.
+
+
+Clone
+=============
+
+.. code-block:: python
+
+  >>> vt_graph_api.VTGraph.clone_graph("<graphid>", "<apikey>")
+
+.. note::
+
+  This method provides you the ability to overwrite some attributes like user/group viewers and editors.
+  
+  
+.. seealso:: Please check **API Reference** for advanced usage.
+
+Utilities
+=============
+
+Check if someone is viewer
+---------------------------
+
+.. code-block:: python
+
+  >>> vt_graph_api.is_viewer("<username>", "<graphid>", "<apikey>")
+  False
+
+
+Check if someone is editor
+----------------------------
+
+.. code-block:: python
+
+  >>> vt_graph_api.is_viewer("<username>", "<graphid>", "<apikey>")
+  False
+
+Getting link
+-----------------------
+
+.. code-block:: python
+
+  >>> vt_graph_api.get_ui_link()
+  'https://www.virustotal.com/graph/'
+
+.. note::
+
+  If the graph is modified using VirusTotal UI, it will be necessary to re-load the graph to make changes
+  effective.
+
+Getting iframe
+-----------------------
+
+We also can get an **iframe link** in order to embed graph in our website.
+
+.. code-block:: python
+
+  >>> vt_graph_api.get_iframe_code()
+  'https://www.virustotal.com/graph/<iframe src="https://www.virustotal.com/graph/embed/" width="800" height="600"></iframe>'
+
+
+Getting API quotas consumed
+------------------------------
+
+It is also possible to check how many API quotas has been consumed since the script started:
+
+.. code-block::
+
+  >>> graph.get_api_calls()
+  1257

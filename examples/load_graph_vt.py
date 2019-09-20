@@ -9,7 +9,7 @@ GRAPH_ID = ""  # Insert yout graph id here.
 
 
 # Retrieve the graph.
-graph = vt_graph_api.VTGraph.from_graph_id(GRAPH_ID, API_KEY)
+graph = vt_graph_api.VTGraph.load_graph(GRAPH_ID, API_KEY)
 
 # modify your graph here
 
