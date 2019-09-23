@@ -124,15 +124,19 @@ Links
 
 Link is a connection between two nodes which represents how and why they are connected.
 
-.. note::
+.. seealso::
 
-  You can check all possible connection types `here <https://www.google.com>`_.
+  Please see VirusTotal documentation in order to check all connection types:
+
+  + `File <https://developers.virustotal.com/v3/reference/#files-relationships>`_.
+  + `URL <https://developers.virustotal.com/v3/reference/#urls-relationships>`_.
+  + `Domain <https://developers.virustotal.com/v3/reference/#domains-relationships>`_.
+  + `IP <https://developers.virustotal.com/v3/reference/#ip-relationships>`_.
     
 Adding link
 -------------------
 
-We can add link between two nodes by specifying the nodes and the **connection type**. 
-If any of the specified nodes are custom, then the connection type must always be **manual**.
+We can add link between two nodes by specifying the nodes and the **connection type**.
 
 .. code-block:: python
 
@@ -146,6 +150,10 @@ If any of the specified nodes are custom, then the connection type must always b
   graph. It is also possible to raise **SameNodeError** if source and target nodes 
   are the same.
 
+.. note::
+
+  Althought there are many connection types, it is sometimes difficult to express what we want, for this 
+  reason we can specify our own relationship type. 
 
 Adding link using autoexploring
 ------------------------------------
@@ -207,6 +215,16 @@ Expansions
 
 As it has been mentioned earlier, the nodes have some expansions. These expansions are all the knowledge
 that we have about how and why nodes could be linked in VirusTotal.
+
+
+.. seealso::
+
+  Please see VirusTotal documentation in order to check all expansion types:
+
+  + `File <https://developers.virustotal.com/v3/reference/#files-relationships>`_.
+  + `URL <https://developers.virustotal.com/v3/reference/#urls-relationships>`_.
+  + `Domain <https://developers.virustotal.com/v3/reference/#domains-relationships>`_.
+  + `IP <https://developers.virustotal.com/v3/reference/#ip-relationships>`_.
 
 Expanding node giving expansion
 ---------------------------------

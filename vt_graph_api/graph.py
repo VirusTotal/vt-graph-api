@@ -40,6 +40,7 @@ class VTGraph(object):
     links (dict): graph links.
   """
 
+  MAX_CHARACTERS = 100
   MIN_API_EXPANSION_NUMBER = 10
   MAX_API_EXPANSION_LIMIT = 40
   MAX_PARALLEL_REQUESTS = 1000
@@ -614,8 +615,8 @@ class VTGraph(object):
         # The intersection between possible expansion of each node give
         # us the common expansions
         shared_expansions = (
-            set(node.expansions_available)
-            .intersection(set(node_.expansions_available)))
+            set(six.iterkeys(node.children))
+            .intersection(set(six.iterkeys(node_.children))))
         # Two nodes could be minimized if they have the same children in the
         # same expansion and they have at least one child.
         for expansion in shared_expansions:
@@ -647,7 +648,7 @@ class VTGraph(object):
       # Finally generate single relationship_id for each expansion for
       # each node of the graph.
       singles_expansion_relationship = (
-          set(node.expansions_available) -
+          set(six.iterkeys(node.children)) -
           set(six.iterkeys(node.relationship_ids)))
       for expansion in singles_expansion_relationship:
         relationship_id = "relationships_{expansion}_{node_id}".format(
@@ -1253,6 +1254,7 @@ class VTGraph(object):
       raise vt_graph_api.errors.NodeNotFoundError(
           "Node '{node_id}' not found in nodes."
           .format(node_id=target_node))
+    connection_type = connection_type.replace(" ", "_")[:self.MAX_CHARACTERS]
     self.links[(source_node, target_node, connection_type)] = True
     self.nodes[source_node].add_child(target_node, connection_type)
 

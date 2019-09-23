@@ -56,8 +56,6 @@ class Node(object):
           "similar_files",
       ],
       "url": [
-          "contacted_domains",
-          "contacted_ips",
           "downloaded_files",
           "last_serving_ip_address",
           "network_location",
@@ -211,8 +209,10 @@ class Node(object):
       node_id (str): child node id.
       expansion (str): expansion for the given node_id.
     """
-    if expansion in self.expansions_available:
-      self.children[expansion].append(node_id)
+    if expansion not in self.children:
+      self.children[expansion] = []
+
+    self.children[expansion].append(node_id)
 
   def delete_child(self, node_id, expansion):
     """Delete child from Node in the given expansion.
@@ -221,7 +221,7 @@ class Node(object):
       node_id (str): child node id.
       expansion (str): expansion for the given node_id.
     """
-    if expansion in self.expansions_available:
+    if expansion in self.children:
       self.children[expansion].remove(node_id)
 
   def reset_relationship_ids(self):
