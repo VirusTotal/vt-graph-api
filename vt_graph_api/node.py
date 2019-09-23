@@ -62,6 +62,8 @@ class Node(object):
           "redirecting_urls",
       ],
       "domain": [
+          "inmediate_parent",
+          "parent",
           "communicating_files",
           "downloaded_files",
           "referrer_files",
