@@ -61,6 +61,12 @@ def test_get_link():
           "https://www.virustotal.com/graph/%s" % graph_id)
 
 
+def test_get_link_error():
+  test_graph.graph_id = ""
+  with pytest.raises(vt_graph_api.errors.SaveGraphError):
+    test_graph.get_ui_link()
+
+
 def test_get_iframe():
   """Test get VT graph iframe."""
   graph_id = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
@@ -69,3 +75,9 @@ def test_get_iframe():
       "<iframe src=\"https://www.virustotal.com/graph/embed/" +
       "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
       .format(graph_id=graph_id))
+
+
+def test_get_iframe_error():
+  test_graph.graph_id = ""
+  with pytest.raises(vt_graph_api.errors.SaveGraphError):
+    test_graph.get_iframe_code()

@@ -540,13 +540,37 @@ be expanded per relationship. Defaults to None.</p></li>
 <dl class="method">
 <dt id="vt_graph_api.graph.VTGraph.get_iframe_code">
 <code class="sig-name descname">get_iframe_code</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vt_graph_api.graph.VTGraph.get_iframe_code" title="Permalink to this definition">¶</a></dt>
-<dd><p>Requires that save_graph was called.</p>
+<dd><p>Return VirusTotal UI iframe for the graph.</p>
+<p>Requires that save_graph was called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#vt_graph_api.errors.SaveGraphError" title="vt_graph_api.errors.SaveGraphError"><strong>vt_graph_api.errors.SaveGraphError</strong></a> – if <cite>save_graph</cite> was not called.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>VirusTotal UI iframe.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="vt_graph_api.graph.VTGraph.get_ui_link">
 <code class="sig-name descname">get_ui_link</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vt_graph_api.graph.VTGraph.get_ui_link" title="Permalink to this definition">¶</a></dt>
-<dd><p>Requires that save_graph was called.</p>
+<dd><p>Return VirusTotal UI link for the graph.</p>
+<p>Requires that save_graph was called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#vt_graph_api.errors.SaveGraphError" title="vt_graph_api.errors.SaveGraphError"><strong>vt_graph_api.errors.SaveGraphError</strong></a> – if <cite>save_graph</cite> was not called.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>VirusTotal UI link.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
@@ -669,6 +693,7 @@ VTGraph node representation.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node_id</strong> (<em>str</em>) – node identifier.</p></li>
 <li><p><strong>node_type</strong> (<em>str</em>) – node type, must be one of the SUPPORTED_NODE_TYPES.</p></li>
+<li><p><strong>pretty_id</strong> (<em>str</em>) – node identifier without dots.</p></li>
 <li><p><strong>x</strong> (<em>int</em><em>, </em><em>optional</em>) – X coordinate for Node representation in VT Graph GUI.</p></li>
 <li><p><strong>y</strong> (<em>int</em><em>, </em><em>optional</em>) – Y coordinate for Node representation in VT Graph GUI.</p></li>
 <li><p><strong>expansions_available</strong> (<em>[</em><em>str</em><em>]</em>) – available expansions for the node.</p></li>
@@ -750,23 +775,6 @@ expansion type.</p></li>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>int</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="method">
-<dt id="vt_graph_api.node.Node.get_id">
-<em class="property">static </em><code class="sig-name descname">get_id</code><span class="sig-paren">(</span><em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="headerlink" href="#vt_graph_api.node.Node.get_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the given node_id without dots.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>node_id</strong> (<a class="reference internal" href="#vt_graph_api.node.Node" title="vt_graph_api.node.Node"><em>Node</em></a>) – node ID.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>the given node_id without dots.</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>str</p>
 </dd>
 </dl>
 </dd></dl>

@@ -566,7 +566,7 @@ class VTGraph(object):
       self._log("Saving graph error: {data}".format(data=data))
       raise vt_graph_api.errors.SaveGraphError(str(data))
     self.graph_id = data["data"]["id"]
-    
+
   def _fetch_node_information(self, node):
     """Fetch VT to get the node information.
 
@@ -634,7 +634,7 @@ class VTGraph(object):
             not node_to_minimize.relationship_ids.get(expansion)):
           relationship_id = "relationships_{expansion}_{node_id}".format(
               expansion=expansion,
-              node_id=vt_graph_api.node.Node.get_id_without_dots(node.node_id))
+              node_id=node.pretty_id)
           node.relationship_ids[expansion] = relationship_id
           node_to_minimize.relationship_ids[expansion] = relationship_id
         elif not node.relationship_ids.get(expansion):
@@ -652,7 +652,7 @@ class VTGraph(object):
       for expansion in singles_expansion_relationship:
         relationship_id = "relationships_{expansion}_{node_id}".format(
             expansion=expansion,
-            node_id=vt_graph_api.node.Node.get_id_without_dots(node.node_id))
+            node_id=node.pretty_id)
         node.relationship_ids[expansion] = relationship_id
 
   def _get_file_sha_256(self, node_id, is_filename=False):
@@ -773,6 +773,58 @@ class VTGraph(object):
     self._id_references[node_id] = valid_node_id
     return valid_node_id
 
+  def _query_expansion_nodes(self, node, expansion,
+                             max_nodes_per_relationship, cursor, max_retries):
+    """Get expansion nodes JSON data by querying VirusTotal API.
+
+    Args:
+      node (Node): node to be expanded
+      expansion (str): expansion name. For example: compressed_parents for
+        nodes of type file.
+      max_nodes_per_relationship (int): max number of nodes that will
+        be expanded per relationship.
+      cursor (str): VT relationships cursor. Defaults to None.
+      max_retries (int): maximum retries for API request.
+
+    Raises:
+        vt_graph_api.errors.MaximumConnectionRetriesError: if the maximum number
+        of retries will be reached by the function.
+
+    Returns:
+        dict: VirusTotal API response.
+    """
+    data = {}
+    end_point = self._get_api_endpoint(node.node_type)
+    request_try = 0
+    has_response = False
+    limit = min(max_nodes_per_relationship, self.MAX_API_EXPANSION_LIMIT)
+    url = (
+        "https://www.virustotal.com/api/v3/" +
+        "{end_point}/{node_id}/{expansion}?limit={limit}"
+        .format(end_point=end_point, node_id=node.node_id, expansion=expansion,
+                limit=limit)
+    )
+    if cursor:
+      url = "{url}&cursor={cursor}".format(url=url, cursor=cursor)
+
+    # If the request fails, it will be retried as much as max_retries.
+    while request_try < max_retries and not has_response:
+      try:
+        self._log(
+            "Expanding node {node_id} with expansion {expansion}"
+            .format(node_id=node.node_id, expansion=expansion))
+        self._increment_api_counter()
+        response = requests.get(
+            url, headers=self._get_headers(), timeout=self.REQUEST_TIMEOUT)
+        has_response = True
+        if response.status_code == 200:
+          data = response.json()
+      except requests.ConnectionError:
+        request_try += 1
+        if request_try >= max_retries:
+          raise vt_graph_api.errors.MaximumConnectionRetriesError()
+    return data
+
   def _get_expansion_nodes(self, node, expansion,
                            max_nodes_per_relationship=1000, cursor=None,
                            max_retries=3, expansion_nodes=None,
@@ -811,46 +863,13 @@ class VTGraph(object):
     expansion_nodes = expansion_nodes or []
     parent_node_id = node.node_id
     parent_node_type = node.node_type
-    end_point = self._get_api_endpoint(parent_node_type)
-    request_try = 0
-    has_response = False
-    limit = min(max_nodes_per_relationship, self.MAX_API_EXPANSION_LIMIT)
 
-    url = (
-        "https://www.virustotal.com/api/v3/" +
-        "{end_point}/{node_id}/{expansion}?limit={limit}"
-        .format(end_point=end_point, node_id=node.node_id, expansion=expansion,
-                limit=limit)
-    )
-    if cursor:
-      url = "{url}&cursor={cursor}".format(url=url, cursor=cursor)
-
-    # If the request fails, it will be retried as much as max_retries.
-    while request_try < max_retries and not has_response:
-      try:
-        self._log(
-            "Expanding node {node_id} with expansion {expansion}"
-            .format(node_id=node.node_id, expansion=expansion))
-        self._increment_api_counter()
-        response = requests.get(
-            url, headers=self._get_headers(), timeout=self.REQUEST_TIMEOUT)
-        consumed_quotas += 1
-        has_response = True
-        if response.status_code == 200:
-          data = response.json()
-        else:
-          data = {}
-          self._log(
-              "Request to {url} with {status_code} status code"
-              .format(url=url, status_code=response.status_code))
-      except requests.ConnectionError:
-        request_try += 1
-        if request_try >= max_retries:
-          raise vt_graph_api.errors.MaximumConnectionRetriesError()
+    data = self._query_expansion_nodes(
+        node, expansion, max_nodes_per_relationship, cursor, max_retries)
+    consumed_quotas += 1
 
     # Add cursor data.
     has_more = data.get("meta", {})
-
     # Some results return just one element back.
     new_nodes = data.get("data", list())
     if isinstance(new_nodes, dict):
@@ -948,7 +967,7 @@ class VTGraph(object):
 
         nodes, _ = future.result()
         not_visited_nodes = (node for node in nodes
-                              if node not in visited_nodes)
+                             if node not in visited_nodes)
 
         for not_visited_node in not_visited_nodes:
           # Make this part thread safe.
@@ -962,9 +981,9 @@ class VTGraph(object):
             else:
               expansion_nodes[not_visited_node] = ((
                   path + [(node.node_id,
-                            not_visited_node.node_id,
-                            expansion,
-                            not_visited_node.node_type)],
+                           not_visited_node.node_id,
+                           expansion,
+                           not_visited_node.node_type)],
                   depth + 1))
     return expansion_nodes
 
@@ -1065,10 +1084,6 @@ class VTGraph(object):
     This call consumes API quota (as much as max_api_quotas value), one for
     each expansion required to find the relationship.
     """
-    quotas_before_get_id = self.get_api_calls()
-    quotas_after_get_id = self.get_api_calls()
-    max_api_quotas -= (quotas_after_get_id - quotas_before_get_id)
-
     has_link = False
     for source_, target_, _ in self.links:
       if (source_ == source_node.node_id and
@@ -1279,8 +1294,11 @@ class VTGraph(object):
           "It is no possible to add links between the same node; id: {node_id}."
           .format(node_id=source_node))
 
+    quotas_before_get_id = self.get_api_calls()
     source_node = self._get_node_id(source_node)
     target_node = self._get_node_id(target_node)
+    max_api_quotas -= (self.get_api_calls() - quotas_before_get_id)
+
     if source_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "Node '{node_id}' not found in nodes.".format(node_id=source_node))
@@ -1327,7 +1345,10 @@ class VTGraph(object):
     This call consumes API quota (as much as max_api_quotas value), one for
     each expansion required to find the relationships.
     """
+    quotas_before_get_id = self.get_api_calls()
     source_node = self._get_node_id(source_node)
+    max_api_quotas -= (self.get_api_calls() - quotas_before_get_id)
+
     if source_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "Node '{node_id}' not found in nodes.".format(node_id=source_node))
@@ -1593,12 +1614,36 @@ class VTGraph(object):
     return api_calls
 
   def get_ui_link(self):
-    """Requires that save_graph was called."""
+    """Return VirusTotal UI link for the graph.
+
+    Requires that save_graph was called.
+
+    Raises:
+      vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
+
+    Returns:
+        str: VirusTotal UI link.
+    """
+    if not self.graph_id:
+      raise vt_graph_api.errors.SaveGraphError(
+          "`save_graph` has not been called yet!")
     return "https://www.virustotal.com/graph/{graph_id}".format(
         graph_id=self.graph_id)
 
   def get_iframe_code(self):
-    """Requires that save_graph was called."""
+    """Return VirusTotal UI iframe for the graph.
+
+    Requires that save_graph was called.
+
+    Raises:
+      vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
+
+    Returns:
+        str: VirusTotal UI iframe.
+    """
+    if not self.graph_id:
+      raise vt_graph_api.errors.SaveGraphError(
+          "`save_graph` has not been called yet!")
     return (
         "<iframe src=\"https://www.virustotal.com/graph/embed/" +
         "{graph_id}\" width=\"800\" height=\"600\"></iframe>"

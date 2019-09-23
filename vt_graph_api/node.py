@@ -22,6 +22,7 @@ class Node(object):
   Attributes:
     node_id (str): node identifier.
     node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES.
+    pretty_id (str): node identifier without dots.
     x (int, optional): X coordinate for Node representation in VT Graph GUI.
     y (int, optional): Y coordinate for Node representation in VT Graph GUI.
     expansions_available ([str]): available expansions for the node.
@@ -89,6 +90,7 @@ class Node(object):
       x (int, optional): X coordinate for Node representation in VT Graph GUI.
       y (int, optional): Y coordinate for Node representation in VT Graph GUI.
     """
+    self.pretty_id = node_id.replace(".", "")
     self.node_id = node_id
     self.node_type = node_type
     self.x = x
@@ -237,15 +239,3 @@ class Node(object):
 
   def __hash__(self):
     return hash(self.node_id)
-
-  @staticmethod
-  def get_id_without_dots(node_id):
-    """Return the given node_id without dots.
-
-    Args:
-        node_id (Node): node ID.
-
-    Returns:
-        str: the given node_id without dots.
-    """
-    return node_id.replace(".", "")
