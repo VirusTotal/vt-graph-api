@@ -1254,6 +1254,10 @@ class VTGraph(object):
       raise vt_graph_api.errors.NodeNotFoundError(
           "Node '{node_id}' not found in nodes."
           .format(node_id=target_node))
+    if connection_type not in self.nodes[source_node].expansions_available:
+      self._log("Expansion `{expansion_type}` is not standard expansion type",
+                logging.WARNING)
+
     connection_type = connection_type.replace(" ", "_")[:self.MAX_CHARACTERS]
     self.links[(source_node, target_node, connection_type)] = True
     self.nodes[source_node].add_child(target_node, connection_type)
