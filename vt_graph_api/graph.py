@@ -808,8 +808,7 @@ class VTGraph(object):
         "https://www.virustotal.com/api/v3/" +
         "{end_point}/{node_id}/{expansion}?limit={limit}"
         .format(end_point=end_point, node_id=node.node_id, expansion=expansion,
-                limit=limit)
-    )
+                limit=limit))
     if cursor:
       url = "{url}&cursor={cursor}".format(url=url, cursor=cursor)
 
