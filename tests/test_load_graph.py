@@ -180,7 +180,7 @@ def test_load_graph_with_fail_request(mocker):
 def test_load_graph_wrong_json(mocker):
   """Test load from id with error in JSON structure."""
   with pytest.raises(
-      vt_graph_api.errors.LoadError):
+      vt_graph_api.errors.InvalidJSONError):
     side_effects = [
         GRAPH_WRONG_RESPONSE_DATA,
         VIEWERS_RESPONSE_DATA,

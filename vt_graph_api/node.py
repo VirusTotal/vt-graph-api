@@ -109,7 +109,7 @@ class Node(object):
     Returns:
       int: the number of detections.
     """
-    if self.attributes.get("has_detections"):
+    if "has_detections" in self.attributes:
       return self.attributes["has_detections"]
     else:
       stats = self.attributes.get("last_analysis_stats", {})

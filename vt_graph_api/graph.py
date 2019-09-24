@@ -18,6 +18,7 @@ import concurrent.futures
 import requests
 import six
 import vt_graph_api.errors
+import vt_graph_api.helpers
 import vt_graph_api.node
 import vt_graph_api.version
 
@@ -91,6 +92,7 @@ class VTGraph(object):
     Raises:
       vt_graph_api.errors.LoadError: whether the given graph_id cannot be
         found or JSON does not have the correct structure.
+      vt_graph_api.errors.InvalidJSONError: if the JSON response is invalid.
 
     Returns:
       VTGraph: the imported graph.
@@ -108,32 +110,35 @@ class VTGraph(object):
           ("Error to find graph with id: {graph_id}. Response code: " +
            "{status_code}.").format(
                graph_id=graph_id, status_code=graph_data_response.status_code))
+
     try:
       data = graph_data_response.json()
+    except json.JSONDecodeError:
+      raise vt_graph_api.errors.LoadError(
+          "Malformed JSON response: {json_response}"
+          .format(json_response=graph_data_response.text))
+
+    try:
       graph_name = data["data"]["attributes"]["graph_data"]["description"]
       private = data["data"]["attributes"]["private"]
       nodes = data["data"]["attributes"]["nodes"]
       links = data["data"]["attributes"]["links"]
-
-      # Create empty graph.
-      graph = vt_graph_api.graph.VTGraph(
-          api_key=api_key, name=graph_name, private=private)
-      graph.graph_id = graph_id
-      # Adds users/group viewers and editors.
-      graph._pull_viewers()
-      graph._pull_editors()
-      # Adds nodes to the graph.
-      graph._add_nodes_from_json_graph_data(nodes)
-      # Adds links to the graph.
-      graph._add_links_from_json_graph_data(links)
-
     except KeyError as e:
-      raise vt_graph_api.errors.LoadError(
+      raise vt_graph_api.errors.InvalidJSONError(
           "Unexpected error in json structure at load_graph: {msg}."
           .format(msg=str(e)))
-    except vt_graph_api.errors.WrongJSONError as e:
-      raise vt_graph_api.errors.LoadError(str(e))
 
+    # Creates empty graph.
+    graph = vt_graph_api.graph.VTGraph(
+        api_key=api_key, name=graph_name, private=private)
+    graph.graph_id = graph_id
+    # Adds users/group viewers and editors.
+    graph._pull_viewers()
+    graph._pull_editors()
+    # Adds nodes to the graph.
+    graph._add_nodes_from_json_graph_data(nodes)
+    # Adds links to the graph.
+    graph._add_links_from_json_graph_data(links)
     return graph
 
   @staticmethod
@@ -321,7 +326,7 @@ class VTGraph(object):
     json_graph_data_nodes are the responses from querying VT.
 
     Raises:
-      WrongJSONError: whether the API response does not have the correct
+      InvalidJSONError: whether the API response does not have the correct
         structure.
 
     Args:
@@ -355,7 +360,7 @@ class VTGraph(object):
       # Add all nodes concurrently
       self.add_nodes(nodes_to_add, False, False)
     except KeyError:
-      raise vt_graph_api.errors.WrongJSONError(
+      raise vt_graph_api.errors.InvalidJSONError(
           "This is implementation details, the error is coming from the node " +
           "field in the VT response.")
 
@@ -365,7 +370,7 @@ class VTGraph(object):
     json_graph_data_links are the responses from querying VT.
 
     Raises:
-      WrongJSONError: whether the API response does not have the correct
+      InvalidJSONError: whether the API response does not have the correct
         structure.
 
     Args:
@@ -400,7 +405,7 @@ class VTGraph(object):
           self.add_link(link_data["source"], node, link_data["connection_type"])
 
     except KeyError:
-      raise vt_graph_api.errors.WrongJSONError(
+      raise vt_graph_api.errors.InvalidJSONError(
           "This is implementation details, the error is coming from the link " +
           "field in the VT response."
       )
@@ -411,7 +416,7 @@ class VTGraph(object):
     It is necessary to call _push_viewers in order to save changes.
 
     Raises:
-      WrongJSONError: whether the API response does not have the correct
+      InvalidJSONError: whether the API response does not have the correct
         structure.
     """
     if not self.graph_id:
@@ -434,7 +439,7 @@ class VTGraph(object):
         else:
           user_viewers.append(viewer["id"])
     except KeyError as e:
-      raise vt_graph_api.errors.WrongJSONError(
+      raise vt_graph_api.errors.InvalidJSONError(
           "Unexpected error in json structure at get_graph_viewers: {msg}"
           .format(msg=str(e)))
     self.user_viewers.extend(user_viewers)
@@ -475,7 +480,7 @@ class VTGraph(object):
     It is necessary to call _push_editors in order to save changes.
 
     Raises:
-      WrongJSONError: whether the API response does not have the correct
+      InvalidJSONError: whether the API response does not have the correct
         structure.
     """
     if not self.graph_id:
@@ -498,7 +503,7 @@ class VTGraph(object):
         else:
           user_editors.append(editor["id"])
     except KeyError as e:
-      raise vt_graph_api.errors.WrongJSONError(
+      raise vt_graph_api.errors.InvalidJSONError(
           "Unexpected error in json structure at get_graph_editors: {msg}"
           .format(msg=str(e)))
 
@@ -615,8 +620,8 @@ class VTGraph(object):
         # The intersection between possible expansion of each node give
         # us the common expansions
         shared_expansions = (
-            set(six.iterkeys(node.children))
-            .intersection(set(six.iterkeys(node_.children))))
+            set(node.children)
+            .intersection(set(node_.children)))
         # Two nodes could be minimized if they have the same children in the
         # same expansion and they have at least one child.
         for expansion in shared_expansions:
@@ -648,8 +653,8 @@ class VTGraph(object):
       # Finally generate single relationship_id for each expansion for
       # each node of the graph.
       singles_expansion_relationship = (
-          set(six.iterkeys(node.children)) -
-          set(six.iterkeys(node.relationship_ids)))
+          set(node.children) -
+          set(node.relationship_ids))
       for expansion in singles_expansion_relationship:
         relationship_id = "relationships_{expansion}_{node_id}".format(
             expansion=expansion,
@@ -682,13 +687,12 @@ class VTGraph(object):
       response = requests.get(url, headers=self._get_headers())
       if response.status_code == 200:
         data = response.json()
-        try:
-          total_hits = data.get("meta", dict()).get("total_hits", 0)
-          node_type = data["data"][0]["type"]
-          if (total_hits == 1 and node_type == "file"):
-            node_id = data["data"][0]["id"]
-        except KeyError:
-          pass
+        total_hits = vt_graph_api.helpers.safe_get(
+            data, "meta", "total_hits", default=0)
+        node_type = vt_graph_api.helpers.safe_get(
+            data, "data", 0, "type")
+        if (total_hits == 1 and node_type == "file"):
+          node_id = data["data"][0]["id"]
     else:
       url = "https://www.virustotal.com/api/v3/files/{node_id}".format(
           node_id=node_id)
@@ -697,8 +701,8 @@ class VTGraph(object):
         return node_id
 
       data = response.json()
-      node_id = data.get("data", dict()).get(
-          "attributes", dict()).get("sha256", node_id)
+      node_id = vt_graph_api.helpers.safe_get(
+          data, "data", "attributes", "sha256", default=node_id)
 
     self._increment_api_counter()
     return node_id
@@ -720,8 +724,9 @@ class VTGraph(object):
         url, data={"url": node_id}, headers=self._get_headers())
     if response.status_code == 200:
       data = response.json()
-      node_id = data.get("data", dict()).get(
-          "id", "u-'{node_id}'-u".format(node_id=node_id)).split("-")
+      default_node_id = "u-'{node_id}'-u".format(node_id=node_id)
+      node_id = vt_graph_api.helpers.safe_get(
+          data, "data", "id", default=default_node_id).split("-")
       if len(node_id) > 1:
         node_id = node_id[1]
     self._increment_api_counter()
@@ -1244,8 +1249,10 @@ class VTGraph(object):
       raise vt_graph_api.errors.SameNodeError(
           "It is no possible to add links between the same node; id: {node_id}."
           .format(node_id=source_node))
+
     source_node = self._get_node_id(source_node)
     target_node = self._get_node_id(target_node)
+
     if source_node not in self.nodes:
       raise vt_graph_api.errors.NodeNotFoundError(
           "Node '{node_id}' not found in nodes."

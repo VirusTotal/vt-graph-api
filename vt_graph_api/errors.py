@@ -37,7 +37,7 @@ class MaximumConnectionRetriesError(Exception):
   pass
 
 
-class WrongJSONError(Exception):
+class InvalidJSONError(Exception):
   pass
 
 
