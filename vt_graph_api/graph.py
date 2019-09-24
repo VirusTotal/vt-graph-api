@@ -4,7 +4,7 @@ This module provides the Python object wrapper for
 VirusTotal Graph representation.
 
 Documentation:
-  VT API: https://developers.virustotal.com/v3.0/docs/api-documentation
+  VT API: https://virustotal.github.io/vt-graph-api/
 """
 
 
