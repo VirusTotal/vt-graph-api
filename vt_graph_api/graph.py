@@ -418,6 +418,7 @@ class VTGraph(object):
     Raises:
       InvalidJSONError: whether the API response does not have the correct
         structure.
+      LoadError: if there is any problem while querying VirusTotal API.
     """
     if not self.graph_id:
       return
@@ -430,7 +431,9 @@ class VTGraph(object):
     viewers_data_response = requests.get(
         viewers_data_url, headers=self._get_headers())
     if viewers_data_response.status_code != 200:
-      return
+      raise vt_graph_api.errors.LoadError(
+          "Error while pulling viewers; code: {code}".format(
+              code=viewers_data_response.status_code))
     try:
       viewers_data = viewers_data_response.json()
       for viewer in viewers_data["data"]:
@@ -482,6 +485,7 @@ class VTGraph(object):
     Raises:
       InvalidJSONError: whether the API response does not have the correct
         structure.
+      LoadError: if there is any problem while querying VirusTotal API.
     """
     if not self.graph_id:
       return
@@ -494,7 +498,9 @@ class VTGraph(object):
     editors_data_response = requests.get(
         editors_data_url, headers=self._get_headers())
     if editors_data_response.status_code != 200:
-      return
+      raise vt_graph_api.errors.LoadError(
+          "Error while pulling editors; code: {code}".format(
+              code=editors_data_response.status_code))
     try:
       editors_data = editors_data_response.json()
       for editor in editors_data["data"]:

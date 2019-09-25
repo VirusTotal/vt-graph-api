@@ -112,8 +112,8 @@ def test_load_graph_without_editors_and_viewers(mocker):
   side_effects = [
       mocker.Mock(status_code=200,
                   json=mocker.Mock(return_value=GRAPH_RESPONSE_DATA)),
-      mocker.Mock(status_code=404),
-      mocker.Mock(status_code=404)
+      mocker.Mock(status_code=200, json=mocker.Mock(return_value={"data": []})),
+      mocker.Mock(status_code=200, json=mocker.Mock(return_value={"data": []}))
   ]
   mocker.patch("requests.get", side_effect=side_effects)
   test_graph = vt_graph_api.graph.VTGraph.load_graph(GRAPH_ID, API_KEY)
