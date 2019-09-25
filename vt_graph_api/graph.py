@@ -1230,8 +1230,7 @@ class VTGraph(object):
   def add_link(self, source_node, target_node, connection_type=""):
     """Adds a link between source_node and target_node with the given connection_type.
 
-    If there's no connection type supplied, the relationship between the nodes
-    will be called `edge`. That is to say that this link will be drawed without
+    If there's no connection type supplied, the link will be drawed without
     relationship node in VirusTotal UI.
 
     Args:
