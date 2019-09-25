@@ -8,41 +8,27 @@ from vt_graph_api.errors import NodeNotFoundError
 API_KEY = ""  # Add your VT API Key here.
 
 
-g = VTGraph(
-    API_KEY,
-    verbose=False,
-    private=True,
-    name="First private Graph API test",
-    user_editors=["jinfantes"],
-    group_viewers=["virustotal"]
-)
+graph = VTGraph(
+    API_KEY, verbose=False, private=True, name="First Graph",
+    user_editors=["jinfantes"], group_viewers=["virustotal"])
 
 # Adding first node. WannyCry hash
-g.add_node(
+graph.add_node(
     "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa",
-    "file",
-    label="Investigation node"
-)
+    "file", label="Investigation node")
 
 print("Expanding... this might take a few seconds.")
-g.expand_n_level(
-    level=1,
-    max_nodes_per_relationship=10,
-    max_nodes=200
-)
+graph.expand_n_level(level=1, max_nodes_per_relationship=10, max_nodes=200)
 
 # Adding second node, Kill Switch domain
-g.add_node(
-    "www.ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com",
-    "domain",
-    label="Kill Switch",
-    fetch_information=True
+graph.add_node(
+    "www.ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "domain",
+    label="Kill Switch", fetch_information=True
 )
 
 # Expanding the communicating files of the kill switch domain.
-g.expand(
-    "www.ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com",
-    "communicating_files",
+graph.expand(
+    "www.ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "communicating_files",
     max_nodes_per_relationship=20
 )
 
@@ -71,10 +57,10 @@ nodes_to_delete = [
 
 for node in nodes_to_delete:
   try:
-    g.delete_node(node)
+    graph.delete_node(node)
   except NodeNotFoundError:
     pass  # Ignoring if the node does not exist in the graph.
 
-g.save_graph()
+graph.save_graph()
 
-print("Graph ID: %s" % g.graph_id)
+print("Graph ID: %s" % graph.graph_id)

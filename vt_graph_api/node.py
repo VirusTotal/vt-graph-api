@@ -6,7 +6,6 @@ VTGraph node representation.
 
 
 import re
-from vt_graph_api.errors import NodeNotSupportedTypeError
 
 
 URL_RE = re.compile(r"https?://", re.IGNORECASE)
@@ -18,11 +17,14 @@ DOMAIN_RE = re.compile(r"^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$")
 
 
 class Node(object):
-  """Python object wraper for a the VT Graph Node representation.
+  """Python object wraper for the VT Graph Node representation.
 
   Attributes:
     node_id (str): node identifier.
     node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES.
+    pretty_id (str): node identifier without dots.
+    x (int, optional): X coordinate for Node representation in VT Graph GUI.
+    y (int, optional): Y coordinate for Node representation in VT Graph GUI.
     expansions_available ([str]): available expansions for the node.
     attributes (dict): VirusTotal attribute dict.
     label (str): node name.
@@ -54,14 +56,14 @@ class Node(object):
           "similar_files",
       ],
       "url": [
-          "contacted_domains",
-          "contacted_ips",
           "downloaded_files",
           "last_serving_ip_address",
           "network_location",
           "redirecting_urls",
       ],
       "domain": [
+          "inmediate_parent",
+          "parent",
           "communicating_files",
           "downloaded_files",
           "referrer_files",
@@ -76,31 +78,42 @@ class Node(object):
           "referrer_files",
           "resolutions",
           "urls",
-      ],
+      ]
   }
 
-  def __init__(self, node_id, node_type):
-    """Creates an instance of a graph object.
+  def __init__(self, node_id, node_type, x=0, y=0):
+    """Creates an instance of a node object.
 
     Args:
       node_id (str): node identifier.
       node_type (str): node type, must be one of the SUPPORTED_NODE_TYPES
-
-    Raises:
-      NodeNotSupportedTypeError: if node_type not in SUPPORTED_NODE_TYPES
+      x (int, optional): X coordinate for Node representation in VT Graph GUI.
+      y (int, optional): Y coordinate for Node representation in VT Graph GUI.
     """
-    if node_type not in self.SUPPORTED_NODE_TYPES:
-      raise NodeNotSupportedTypeError("Node type: %s not supported" % node_type)
+    self.pretty_id = node_id.replace(".", "")
     self.node_id = node_id
     self.node_type = node_type
-
-    self.expansions_available = self.NODE_EXPANSIONS.get(node_type)
+    self.x = x
+    self.y = y
+    self.expansions_available = self.NODE_EXPANSIONS.get(node_type, [])
     self.attributes = None
     self.label = ""
     self.children = {
         expansion_type: [] for expansion_type in self.expansions_available
     }
     self.relationship_ids = {}
+
+  def get_detections(self):
+    """Get the node detections from attributes.
+
+    Returns:
+      int: the number of detections.
+    """
+    if "has_detections" in self.attributes:
+      return self.attributes["has_detections"]
+    else:
+      stats = self.attributes.get("last_analysis_stats", {})
+      return stats.get("malicious", 0) + stats.get("suspicious", 0)
 
   @staticmethod
   def is_url(node_id):
@@ -198,8 +211,10 @@ class Node(object):
       node_id (str): child node id.
       expansion (str): expansion for the given node_id.
     """
-    if expansion in self.expansions_available:
-      self.children[expansion].append(node_id)
+    if expansion not in self.children:
+      self.children[expansion] = []
+
+    self.children[expansion].append(node_id)
 
   def delete_child(self, node_id, expansion):
     """Delete child from Node in the given expansion.
@@ -208,7 +223,7 @@ class Node(object):
       node_id (str): child node id.
       expansion (str): expansion for the given node_id.
     """
-    if expansion in self.expansions_available:
+    if expansion in self.children:
       self.children[expansion].remove(node_id)
 
   def reset_relationship_ids(self):
@@ -226,15 +241,3 @@ class Node(object):
 
   def __hash__(self):
     return hash(self.node_id)
-
-  @staticmethod
-  def get_id(node_id):
-    """Return the given node_id without dots.
-
-    Args:
-        node_id (Node): node ID.
-
-    Returns:
-        str: the given node_id without dots.
-    """
-    return node_id.replace(".", "")

@@ -7,13 +7,8 @@ import vt_graph_api.errors
 
 
 test_graph = vt_graph_api.VTGraph(
-    "Dummy api key",
-    verbose=False,
-    private=False,
-    name="Graph test",
-    user_editors=["jinfantes"],
-    group_viewers=["virustotal"]
-)
+    "Dummy api key", verbose=False, private=False, name="Graph test",
+    user_editors=["agfernandez"], group_viewers=["virustotal"])
 
 
 def test_save_graph(mocker):
@@ -25,18 +20,16 @@ def test_save_graph(mocker):
   }
   m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
   mocker.patch("requests.post", return_value=m)
-  mocker.patch.object(test_graph, "_fetch_information")
+  mocker.patch.object(test_graph, "_fetch_node_information")
   added_node_id_a = (
-      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"
-  )
+      "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa")
   added_node_id_b = (
-      "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
-  )
+      "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16")
   test_graph.add_node(added_node_id_a, "file", label="Investigation node")
   test_graph.add_node(added_node_id_b, "file", label="Investigation node 2")
   test_graph.add_link(added_node_id_a, added_node_id_b, "similar_files")
-  mocker.patch.object(test_graph, "_add_editors")
-  mocker.patch.object(test_graph, "_add_viewers")
+  mocker.patch.object(test_graph, "_push_editors")
+  mocker.patch.object(test_graph, "_push_viewers")
   test_graph.save_graph()
   mocker.resetall()
 
@@ -44,7 +37,7 @@ def test_save_graph(mocker):
 def test_save_graph_collaborator_not_found(mocker):
   """Test save graph on VT with collaborators not found in VT."""
   with pytest.raises(vt_graph_api.errors.CollaboratorNotFoundError):
-    mocker.patch.object(test_graph, "_send_graph_to_vt")
+    mocker.patch.object(test_graph, "_push_graph_to_vt")
     test_graph.save_graph()
     mocker.resetall()
 
@@ -54,8 +47,8 @@ def test_save_graph_error(mocker):
   with pytest.raises(vt_graph_api.errors.SaveGraphError):
     m = mocker.Mock(status_code=400, json=mocker.Mock(return_value={}))
     mocker.patch("requests.post", return_value=m)
-    mocker.patch.object(test_graph, "_add_editors")
-    mocker.patch.object(test_graph, "_add_viewers")
+    mocker.patch.object(test_graph, "_push_editors")
+    mocker.patch.object(test_graph, "_push_viewers")
     test_graph.save_graph()
     mocker.resetall()
 
@@ -68,6 +61,12 @@ def test_get_link():
           "https://www.virustotal.com/graph/%s" % graph_id)
 
 
+def test_get_link_error():
+  test_graph.graph_id = ""
+  with pytest.raises(vt_graph_api.errors.SaveGraphError):
+    test_graph.get_ui_link()
+
+
 def test_get_iframe():
   """Test get VT graph iframe."""
   graph_id = "dfadsfasd7fa9ds8f7asd9f87dsfasd6f6s8d76fa6sd87f6adsfsdfasd687"
@@ -75,7 +74,10 @@ def test_get_iframe():
   assert test_graph.get_iframe_code() == (
       "<iframe src=\"https://www.virustotal.com/graph/embed/" +
       "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
-      .format(
-          graph_id=graph_id
-      )
-  )
+      .format(graph_id=graph_id))
+
+
+def test_get_iframe_error():
+  test_graph.graph_id = ""
+  with pytest.raises(vt_graph_api.errors.SaveGraphError):
+    test_graph.get_iframe_code()
