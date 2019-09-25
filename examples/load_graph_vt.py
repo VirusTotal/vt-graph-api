@@ -11,9 +11,9 @@ GRAPH_ID = ""  # Insert yout graph id here.
 # Retrieve the graph.
 graph = vt_graph_api.VTGraph.load_graph(GRAPH_ID, API_KEY)
 
-# modify your graph here
+# Modify your graph here
 
-# save it in VirusTotal.
+# Save it in VirusTotal.
 graph.save_graph()
 
 # Get the graph id
