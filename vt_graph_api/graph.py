@@ -429,7 +429,7 @@ class VTGraph(object):
         "https://www.virustotal.com/api/v3/graphs/{graph_id}"
         .format(graph_id=self.graph_id) + "/relationships/viewers")
     viewers_data_response = requests.get(
-        viewers_data_url, headers=self._get_headers)
+        viewers_data_url, headers=self._get_headers())
     if viewers_data_response.status_code != 200:
       raise vt_graph_api.errors.LoadError(
           "Error while pulling viewers; code: {code}".format(
@@ -814,8 +814,7 @@ class VTGraph(object):
         "https://www.virustotal.com/api/v3/" +
         "{end_point}/{node_id}/{expansion}?limit={limit}"
         .format(end_point=end_point, node_id=node.node_id, expansion=expansion,
-                limit=limit)
-    )
+                limit=limit))
     if cursor:
       url = "{url}&cursor={cursor}".format(url=url, cursor=cursor)
 
@@ -1234,16 +1233,17 @@ class VTGraph(object):
     self.delete_links(node_id)
     del self.nodes[node_id]
 
-  def add_link(self, source_node, target_node, connection_type):
+  def add_link(self, source_node, target_node, connection_type=""):
     """Adds a link between source_node and target_node with the given connection_type.
 
-    If the source or target node don"t exist, an exception will be raised.
+    If there's no connection type supplied, the link will be drawed without
+    relationship node in VirusTotal UI.
 
     Args:
       source_node (str): source node ID.
       target_node (str): target node ID.
-      connection_type (str): connection type, for example
-        compressed_parent.
+      connection_type (str, optional): connection type, for example
+        compressed_parent. Defaults to "".
 
     Raises:
       NodeNotFoundError: if any of the given nodes are not found.
@@ -1591,7 +1591,7 @@ class VTGraph(object):
         self._add_node_to_output(output, target_id)
         added.add(target_id)
 
-      if expansion == "manual":
+      if not expansion or expansion == "manual":
         output["data"]["attributes"]["links"].append({
             "connection_type": expansion,
             "source": source_id,
