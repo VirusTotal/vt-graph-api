@@ -180,13 +180,13 @@
 <span class="c1"># Expands the graph 1 level.</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">expand_n_level</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_nodes_per_relationship</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">max_nodes</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-<span class="c1"># Saves the graph</span>
+<span class="c1"># Saves the graph.</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">save_graph</span><span class="p">()</span>
 
-<span class="c1"># Get the graph id</span>
+<span class="c1"># Get the graph id.</span>
 <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Graph Id: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">graph</span><span class="o">.</span><span class="n">graph_id</span><span class="p">)</span>
 
-<span class="c1"># Visualizing the Graph</span>
+<span class="c1"># Visualizing the Graph.</span>
 <span class="k">print</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_ui_link</span><span class="p">())</span>  <span class="c1"># Open the url in the browser</span>
 </pre></div>
 </div>
@@ -207,7 +207,7 @@
     <span class="n">API_KEY</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;First Graph&quot;</span><span class="p">,</span>
     <span class="n">user_editors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;jinfantes&quot;</span><span class="p">],</span> <span class="n">group_viewers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;virustotal&quot;</span><span class="p">])</span>
 
-<span class="c1"># Adding first node. WannyCry hash</span>
+<span class="c1"># Adding first node, WannyCry hash.</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
     <span class="s2">&quot;ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa&quot;</span><span class="p">,</span>
     <span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Investigation node&quot;</span><span class="p">)</span>
@@ -215,7 +215,7 @@
 <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Expanding... this might take a few seconds.&quot;</span><span class="p">)</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">expand_n_level</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_nodes_per_relationship</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_nodes</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
 
-<span class="c1"># Adding second node, Kill Switch domain</span>
+<span class="c1"># Adding second node, Kill Switch domain.</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
     <span class="s2">&quot;www.ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com&quot;</span><span class="p">,</span> <span class="s2">&quot;domain&quot;</span><span class="p">,</span>
     <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Kill Switch&quot;</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="bp">True</span>
@@ -227,7 +227,7 @@
     <span class="n">max_nodes_per_relationship</span><span class="o">=</span><span class="mi">20</span>
 <span class="p">)</span>
 
-<span class="c1"># Deleting nodes</span>
+<span class="c1"># Deleting nodes.</span>
 <span class="n">nodes_to_delete</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;52.57.88.48&quot;</span><span class="p">,</span>
     <span class="s2">&quot;54.153.0.145&quot;</span><span class="p">,</span>
@@ -286,10 +286,10 @@
 <span class="c1"># Try to connect node with graph.</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">save_graph</span><span class="p">()</span>
 
-<span class="c1"># Get the graph id</span>
+<span class="c1"># Get the graph id.</span>
 <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Graph Id: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">graph</span><span class="o">.</span><span class="n">graph_id</span><span class="p">)</span>
 
-<span class="c1"># Visualizing the Graph</span>
+<span class="c1"># Visualizing the Graph.</span>
 <span class="k">print</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_ui_link</span><span class="p">())</span>  <span class="c1"># Open the url in the browser</span>
 </pre></div>
 </div>
@@ -322,10 +322,10 @@
 
 <span class="n">graph</span><span class="o">.</span><span class="n">save_graph</span><span class="p">()</span>
 
-<span class="c1"># Get the graph id</span>
+<span class="c1"># Get the graph id.</span>
 <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Graph Id: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">graph</span><span class="o">.</span><span class="n">graph_id</span><span class="p">)</span>
 
-<span class="c1"># Visualizing the Graph</span>
+<span class="c1"># Visualizing the Graph.</span>
 <span class="k">print</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_ui_link</span><span class="p">())</span>  <span class="c1"># Open the url in the browser</span>
 </pre></div>
 </div>
@@ -345,16 +345,16 @@
 <span class="c1"># Retrieve the graph.</span>
 <span class="n">graph</span> <span class="o">=</span> <span class="n">vt_graph_api</span><span class="o">.</span><span class="n">VTGraph</span><span class="o">.</span><span class="n">load_graph</span><span class="p">(</span><span class="n">GRAPH_ID</span><span class="p">,</span> <span class="n">API_KEY</span><span class="p">)</span>
 
-<span class="c1"># modify your graph here</span>
+<span class="c1"># Modify your graph here.</span>
 
-<span class="c1"># save it in VirusTotal.</span>
+<span class="c1"># Save it in VirusTotal.</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">save_graph</span><span class="p">()</span>
 
-<span class="c1"># Get the graph id</span>
+<span class="c1"># Get the graph id.</span>
 <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Graph Id: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">graph</span><span class="o">.</span><span class="n">graph_id</span><span class="p">)</span>
 
-<span class="c1"># Visualizing the Graph</span>
-<span class="k">print</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_ui_link</span><span class="p">())</span>  <span class="c1"># Open the url in the browser</span>
+<span class="c1"># Visualizing the Graph.</span>
+<span class="k">print</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_ui_link</span><span class="p">())</span>  <span class="c1"># Open the url in the browser.</span>
 </pre></div>
 </div>
 </div>
