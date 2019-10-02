@@ -9,4 +9,4 @@ from vt_graph_api.node import Node
 from vt_graph_api.version import __version__
 
 
-__all__ = ["Node", "VTGraph"]
+__all__ = ["Node", "VTGraph", "__version__"]
