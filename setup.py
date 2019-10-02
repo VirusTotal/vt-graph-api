@@ -1,4 +1,4 @@
-"""Setup fro vt_graph_api module."""
+"""Setup for vt_graph_api module."""
 
 
 import re
