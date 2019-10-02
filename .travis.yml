@@ -2,15 +2,11 @@ dist: xenial
 language: python
 python:
   - "2.7"
-  - "3.2"
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
   - "3.7"
-
 install:
-  - pip install tox-travis
-
+  - pip install tox tox-travis futures requests six pytest pytest-mock==1.10.4 pytest-cov coverage
 script:
   - tox
