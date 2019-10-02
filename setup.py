@@ -1,11 +1,15 @@
 """Setup fro vt_graph_api module."""
 
 
+import re
 import sys
 import setuptools
 
+
 with open("./vt_graph_api/version.py") as f:
-  exec(f.read())
+  version = (
+      re.search(r"__version__ = \'([0-9]{1,}.[0-9]{1,}.[0-9]{1,})\'",
+                f.read()).groups()[0])
 
 # check python version >2.7.x and >=3.2.x
 installable = True
@@ -29,7 +33,7 @@ install_requires = [
 
 setuptools.setup(
     name="vt_graph_api",
-    version=__version__,
+    version=version,
     author="VirusTotal",
     author_email="vt_graph_api@virustotal.com",
     description="VirusTotal Graph API",
