@@ -7,6 +7,6 @@ python:
   - "3.6"
   - "3.7"
 install:
-  - pip install tox tox-travis futures requests six pytest pytest-mock==1.10.4 pytest-cov coverage
+  - pip install tox tox-travis
 script:
   - tox
