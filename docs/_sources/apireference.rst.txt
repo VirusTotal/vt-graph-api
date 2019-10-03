@@ -1,4 +1,4 @@
-.. _APIReference:
+.. _APIReference overview:
 
 **************
 API Reference
