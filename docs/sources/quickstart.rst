@@ -28,8 +28,7 @@ Creates a new graph (replace **<apikey>** with your actual VirusTotal API key):
 Nodes
 ==========================
 
-Node is the minimum unit of graph information. There's some basic node types, and we have also the opportunity to represent our own custom node types, 
-so we can specify any type such as "actor" or "email". The basic node types are the following:
+Node is the minimum unit of graph information. There's some basic node types, and we have also the opportunity to represent our own custom node types, so we can specify any type such as "actor" or "email". The basic node types are the following:
 
   + file
   + domain
@@ -69,7 +68,7 @@ by setting **fetch_vt_enterprise** to True.
 
 .. warning::
 
-  **fetch_vt_enterprise** flag is only available for `premium users <https://www.virustotal.com/gui/graph-overview>`_.
+  **fetch_vt_enterprise** flag is only available for `premium users <https://www.virustotal.com/gui/intelligence-overview>`_.
 
 If we want to add some nodes at the same time we can use **add_nodes**, this method
 receive a node list which is a list of dictionaries with the following structure:
@@ -161,6 +160,8 @@ We can add link between two nodes.
   are the same.
 
 
+.. _add_links_if_match:
+
 Adding link using autoexploring
 ------------------------------------
 
@@ -189,7 +190,7 @@ relationship has been found, then return True, otherwise False.
 Connecting node with whole graph
 -----------------------------------
 
-We can connect a node with our graph by using the same algorithm that **add_links_if_match** uses,
+We can connect a node with our graph by using the same algorithm that :ref:`add links if match <add_links_if_match>` uses,
 with the difference that this time we will use all graph's nodes instead of just one. 
 
 .. code-block:: python
@@ -252,7 +253,7 @@ This method adds to the graph the contacted domains returned by VirusTotal API.
 
 .. note::
 
-  It is possible to specify the maximum number of nodes that we have returned by the expansion, setting
+  It is possible to specify the maximum number of nodes returned by the expansion, setting
   **max_nodes_per_relationship** parameter.
 
 .. warning::
@@ -325,7 +326,7 @@ We can recover a VirusTotal Graph if we have his **ID**:
 
   >>> vt_graph_api.VTGraph.load_graph("<graphid>", "<apikey>")
 
-We can retrieve graphs that we are viewer or editor.
+We can retrieve graphs that we are viewer, editor or owner.
 
 .. warning::
 

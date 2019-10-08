@@ -161,6 +161,8 @@ We can add link between two nodes.
   are the same.
 
 
+.. _add_links_if_match:
+
 Adding link using autoexploring
 ------------------------------------
 
@@ -189,7 +191,7 @@ relationship has been found, then return True, otherwise False.
 Connecting node with whole graph
 -----------------------------------
 
-We can connect a node with our graph by using the same algorithm that **add_links_if_match** uses,
+We can connect a node with our graph by using the same algorithm that :ref:`add links if match <add_links_if_match>` uses,
 with the difference that this time we will use all graph's nodes instead of just one. 
 
 .. code-block:: python
