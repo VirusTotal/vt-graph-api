@@ -1466,6 +1466,10 @@ class VTGraph(object):
       NodeNotSupportedExpansionError: if the node cannot be expanded with the
         given expansion.
 
+    Returns:
+      [Node]: a list with the nodes resulted by the expansion of the given node
+        with the given relationship.
+
     This call consumes API quota.
     """
     node_id = self._get_node_id(node_id)
@@ -1480,12 +1484,15 @@ class VTGraph(object):
           "Node {node_id} cannot be expanded with {expansion} expansion."
           .format(node_id=node_id, expansion=expansion))
 
-    new_nodes, _ = self._get_expansion_nodes(
+    expansion_nodes, _ = self._get_expansion_nodes(
         node, expansion, max_nodes_per_relationship)
     # Adds data to graph.
-    for new_node in new_nodes:
-      self.add_node(new_node.node_id, new_node.node_type)
-      self.add_link(node_id, new_node.node_id, expansion)
+    for node in expansion_nodes:
+      self.add_node(
+          node.node_id, node.node_type, fetch_information=False,
+          node_attributes=node.attributes)
+      self.add_link(node_id, node.node_id, expansion)
+    return expansion_nodes
 
   def expand_one_level(self, node_id, max_nodes_per_relationship=40):
     """Expands all relationship that we know in VirusTotal for the give node.
@@ -1499,6 +1506,10 @@ class VTGraph(object):
       NodeNotFoundError: if the node is not found.
 
     It consumes API quota, one for each expansion available for the node.
+
+    Returns:
+      [Node]: a list with the nodes resulted by te expansion of the given node
+        in all his known relationships.
     """
     node_id = self._get_node_id(node_id)
 
@@ -1506,11 +1517,18 @@ class VTGraph(object):
       raise vt_graph_api.errors.NodeNotFoundError(
           "Node '{node_id}' not found in nodes.".format(node_id=node_id))
 
+    futures = []
+    expansion_nodes = []
     expansions_available = self.nodes[node_id].expansions_available
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=len(expansions_available)) as pool:
       for expansion in expansions_available:
-        pool.submit(self.expand, node_id, expansion, max_nodes_per_relationship)
+        futures.append(pool.submit(
+            self.expand, node_id, expansion, max_nodes_per_relationship))
+      for future in futures:
+        expansion_nodes.extend(future.result())
+
+    return expansion_nodes
 
   def expand_n_level(self, level=1, max_nodes_per_relationship=40,
                      max_nodes=10000):
@@ -1532,14 +1550,19 @@ class VTGraph(object):
         graph. The expansion will stop as soon as any expansion result adds more
         than this limit to the graph. Defaults to 10000.
 
+    Returns:
+      [Node]: a list with the nodes resulted by the expansion of each graph
+        node in all his known relationships.
+
     This call consumes API quota, one for each node expansion.
     """
     pending = {node_id for node_id in six.iterkeys(self.nodes)}
     visited = set()
+    expansion_nodes = []
     for _ in range(level):
       for node_id in pending:
-        self.expand_one_level(
-            node_id, max_nodes_per_relationship=max_nodes_per_relationship)
+        expansion_nodes.extend(self.expand_one_level(
+            node_id, max_nodes_per_relationship=max_nodes_per_relationship))
         visited.add(node_id)
         if max_nodes and len(self.nodes) > max_nodes:
           self._log(
@@ -1548,6 +1571,7 @@ class VTGraph(object):
               .format(len_nodes=len(self.nodes)))
       pending = {node_id for node_id in six.iterkeys(self.nodes)
                  if node_id not in visited}
+    return expansion_nodes
 
   def save_graph(self):
     """Saves the graph into VirusTotal Graph database.
