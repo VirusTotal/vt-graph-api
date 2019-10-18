@@ -120,7 +120,9 @@ def test_expansion_existing_node(mocker):
   expansion_node = vt_graph_api.Node(
       "fb0b6044347e972e21b6c376e37e1115dab494a2c6b9fb28b92b1e45b45d0ebc",
       "file")
-  test_graph.expand(added_node_id, "compressed_parents", 40)
+  assert (
+      [expansion_node] ==
+      test_graph.expand(added_node_id, "compressed_parents", 40))
   assert len(test_graph.nodes) == 2
   assert test_graph.nodes[expansion_node.node_id] == expansion_node
   assert test_graph.links[
@@ -157,9 +159,8 @@ def test_expand_one_level_existing_node(mocker):
       "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa")
   added_node = test_graph.add_node(added_node_id, "file",
                                    label="Investigation node")
-  mocker.patch.object(test_graph, "expand")
   mocker.spy(test_graph, "expand")
-  test_graph.expand_one_level(added_node_id, 40)
+  assert not test_graph.expand_one_level(added_node_id, 40)
   assert test_graph.expand.call_count == len(added_node.expansions_available)
   mocker.resetall()
 
@@ -183,6 +184,6 @@ def test_expand_n_level(mocker):
   test_graph.add_node("www.google.es", "domain", label="Investigation node 3")
   mocker.patch.object(test_graph, "expand_one_level")
   mocker.spy(test_graph, "expand_one_level")
-  test_graph.expand_n_level(1)
+  assert not test_graph.expand_n_level(1)
   assert test_graph.expand_one_level.call_count == len(test_graph.nodes)
   mocker.resetall()
