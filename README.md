@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/VirusTotal/vt-graph-api.svg?token=rf4p1wSWhpA64VBoywFY&branch=master)](https://travis-ci.com/VirusTotal/vt-graph-api)
+[![Build Status](https://travis-ci.com/VirusTotal/vt-graph-api.svg?branch=master)](https://travis-ci.com/VirusTotal/vt-graph-api)
 
 # VirusTotal Graph API
 
