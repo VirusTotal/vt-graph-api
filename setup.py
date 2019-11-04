@@ -36,10 +36,11 @@ setuptools.setup(
     version=version,
     author="VirusTotal",
     author_email="vt_graph_api@virustotal.com",
-    description="VirusTotal Graph API",
+    description="The official Python client library for VirusTotal Graph API",
     license="Apache 2",
+    long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/virustotal/vt_graph_api",
+    url="https://github.com/virustotal/vt-graph-api",
     packages=setuptools.find_packages(),
     install_requires=install_requires,
     classifiers=[
