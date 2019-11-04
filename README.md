@@ -36,6 +36,8 @@ Use tox to test:
 ```
 
 # Changelog
+### V1.0.1
+- Fixing documentation.
 
 ### V1.0.0
 ---
