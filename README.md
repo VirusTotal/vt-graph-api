@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/VirusTotal/vt-graph-api.svg?token=rf4p1wSWhpA64VBoywFY&branch=master)](https://travis-ci.com/VirusTotal/vt-graph-api)
+
 # VirusTotal Graph API
 
 VirusTotal Graph API allows you programatically interact with VirusTotal dataset. See also [vt_graph_data_importers](https://github.com/virustotal/vt-graph-data-importers) module in order to import data from other tools in VT Graph.
