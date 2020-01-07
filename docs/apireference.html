@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>API Reference &mdash; VirusTotal Graph python API 1.0.0 documentation</title>
+  <title>API Reference &mdash; VirusTotal Graph python API 1.0.1 documentation</title>
   
 
   
@@ -487,6 +487,16 @@ MIN_API_EXPANSION_NUMBER. Defaults to 40.</p></li>
     given expansion.</p></li>
 </ul>
 </dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>a list with the nodes resulted by the expansion of the given node</dt><dd><p>with the given relationship.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>[<a class="reference internal" href="#vt_graph_api.node.Node" title="vt_graph_api.node.Node">Node</a>]</p>
+</dd>
 </dl>
 <p>This call consumes API quota.</p>
 </dd></dl>
@@ -514,6 +524,16 @@ graph. The expansion will stop as soon as any expansion result adds more
 than this limit to the graph. Defaults to 10000.</p></li>
 </ul>
 </dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>a list with the nodes resulted by the expansion of each graph</dt><dd><p>node in all his known relationships.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[<a class="reference internal" href="#vt_graph_api.node.Node" title="vt_graph_api.node.Node">Node</a>]</p>
+</dd>
 </dl>
 <p>This call consumes API quota, one for each node expansion.</p>
 </dd></dl>
@@ -535,6 +555,18 @@ be expanded per relationship. Defaults to None.</p></li>
 </dd>
 </dl>
 <p>It consumes API quota, one for each expansion available for the node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>a list with the nodes resulted by te expansion of the given node</dt><dd><p>in all his known relationships.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>[<a class="reference internal" href="#vt_graph_api.node.Node" title="vt_graph_api.node.Node">Node</a>]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
