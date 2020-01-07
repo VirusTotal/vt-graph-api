@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Quickstart &mdash; VirusTotal Graph python API 1.0.0 documentation</title>
+  <title>Quickstart &mdash; VirusTotal Graph python API 1.0.1 documentation</title>
   
 
   
@@ -206,8 +206,7 @@
 </div>
 <div class="section" id="nodes">
 <h2>Nodes<a class="headerlink" href="#nodes" title="Permalink to this headline">¶</a></h2>
-<p>Node is the minimum unit of graph information. There’s some basic node types, and we have also the opportunity to represent our own custom node types,
-so we can specify any type such as “actor” or “email”. The basic node types are the following:</p>
+<p>Node is the minimum unit of graph information. There’s some basic node types, and we have also the opportunity to represent our own custom node types, so we can specify any type such as “actor” or “email”. The basic node types are the following:</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>file</p></li>
@@ -240,7 +239,7 @@ ID with <strong>fetch_vt_enterprise</strong> option, consumes API quota.</p>
 by setting <strong>fetch_vt_enterprise</strong> to True.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p><strong>fetch_vt_enterprise</strong> flag is only available for <a class="reference external" href="https://www.virustotal.com/gui/graph-overview">premium users</a>.</p>
+<p><strong>fetch_vt_enterprise</strong> flag is only available for <a class="reference external" href="https://www.virustotal.com/gui/intelligence-overview">premium users</a>.</p>
 </div>
 <p>If we want to add some nodes at the same time we can use <strong>add_nodes</strong>, this method
 receive a node list which is a list of dictionaries with the following structure:</p>
@@ -399,7 +398,7 @@ expanding the file node using <strong>contacted_domains</strong> as expansion ty
 <p>This method adds to the graph the contacted domains returned by VirusTotal API.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>It is possible to specify the maximum number of nodes that we have returned by the expansion, setting
+<p>It is possible to specify the maximum number of nodes returned by the expansion, setting
 <strong>max_nodes_per_relationship</strong> parameter.</p>
 </div>
 <div class="admonition warning">
@@ -464,7 +463,7 @@ more nodes than necessary.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">vt_graph_api</span><span class="o">.</span><span class="n">VTGraph</span><span class="o">.</span><span class="n">load_graph</span><span class="p">(</span><span class="s2">&quot;&lt;graphid&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;apikey&gt;&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>We can retrieve graphs that we are viewer or editor.</p>
+<p>We can retrieve graphs that we are viewer, editor or owner.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>We cannot modify and save the loaded graph if we have no editor permissions.</p>
