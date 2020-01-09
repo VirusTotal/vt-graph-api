@@ -19,7 +19,7 @@ Creates a new graph (replace **<apikey>** with your actual VirusTotal API key):
 
 .. code-block:: python
 
-  >>> graph = vt_graph_api.VTGraph("<apikey>", name="My Graph", private=True, user_viewers=['alvarogf'])
+  >>> graph = vt_graph_api.VTGraph("<apikey>", name="My Graph", private=False)
 
 .. warning::
 
@@ -28,7 +28,7 @@ Creates a new graph (replace **<apikey>** with your actual VirusTotal API key):
 Nodes
 ==========================
 
-Node is the minimum unit of graph information. There's some basic node types, and we have also the opportunity to represent our own custom node types, so we can specify any type such as "actor" or "email". The basic node types are the following:
+Nodes are the minimum unit of graph representation. There's some basic node types, and we have also the opportunity to represent our own custom node types, so we can specify any type such as "actor" or "email". The basic node types are the following:
 
   + file
   + domain
@@ -55,13 +55,13 @@ Or our own custom type:
 
 .. code-block:: python
 
-  >>> graph.add_node("alvarogf", "victim", label="mynode")
+  >>> graph.add_node("badguy", "victim")")
 
 We can also specify that we want to fetch information on VirusTotal, about the node we are adding by setting **fetch_information** to True:
 
 .. code-block:: python
 
-  >>> graph.add_node("www.virustotal.com", "domain", fetch_information=True, label="mynode")
+  >>> graph.add_node("www.virustotal.com", "domain", fetch_information=True)
 
 You can improve the search using `VirusTotal Intelligence <https://www.virustotal.com/gui/intelligence-overview>`_ 
 by setting **fetch_vt_enterprise** to True.
@@ -80,23 +80,23 @@ receive a node list which is a list of dictionaries with the following structure
       {
         "node_id" = "www.virustotal.com",
         "node_type" = "domain",
-        "label" = "mynode",   # This attribute is optional. 
-        "attributes" = "",  # This attribute is optional. 
-        "x_position" = "", # This attribute is optional. 
-        "y_position" = ""  # This attribute is optional. 
+        "label" = "mynode",   # This attribute is optional.
+        "attributes" = "",  # This attribute is optional.
+        "x_position" = "", # This attribute is optional.
+        "y_position" = ""  # This attribute is optional.
       },
       ...
   ]
 
-  >>> graph.add_nodes(node_list, fetch_information=True, fetch_vt_enterprise=True)
+  >>> graph.add_nodes(node_list, fetch_information=True)
 
-.. seealso:: 
+.. seealso::
 
   For advanced usage, please check :ref:`APIReference overview`.
 
 .. warning::
 
-  Setting **fetch_vt_enterprise** or **fetch_information** to True, consumes API quota.
+  Setting **fetch_information** to True consumes API quota.
 
 Deleting Node
 -------------------
@@ -105,11 +105,11 @@ Deleting Node
 
   graph.delete_node("www.virustotal.com")
 
-This method will raise **NodeNotFoundError** if the given node id not belongs to the graph.
+This method will raise **NodeNotFoundError** if the given node id does not belong to the graph.
 
 .. note::
 
-  This method also delete every link which have relation with the deleted node.
+  This method also deletes every link which have relation with the deleted node.
 
 Checking if node id belongs to graph
 --------------------------------------
@@ -129,7 +129,7 @@ Link is a connection between two nodes which represents how and why they are con
 
 .. note::
 
-  If **connection_type** is supplied, a relationship node will be created in VirusTotal Graph UI. Althought there are many 
+  If **connection_type** is supplied, a relationship node will be created in VirusTotal Graph UI. Althought there are many
   relationship types, we have also the opportunity to represent our own custom relationship. It is possible to create a 
   link without **connection_type** too.
 
@@ -141,22 +141,23 @@ Link is a connection between two nodes which represents how and why they are con
   + `URL <https://developers.virustotal.com/v3/reference/#urls-relationships>`_.
   + `Domain <https://developers.virustotal.com/v3/reference/#domains-relationships>`_.
   + `IP <https://developers.virustotal.com/v3/reference/#ip-relationships>`_.
-    
+
+
 Adding link
 -------------------
 
-We can add link between two nodes. 
+We can add link between two nodes.
 
 .. code-block:: python
 
   >>> graph.add_link("85ce324b8f78021ecfc9b811c748f19b82e61bb093ff64f2eab457f9ef19b186",
-  >>>                "3f3a9dde96ec4107f67b0559b4e95f5f1bca1ec6cb204bfe5fea0230845e8301", 
+  >>>                "3f3a9dde96ec4107f67b0559b4e95f5f1bca1ec6cb204bfe5fea0230845e8301",
   >>>                connection_type="bundled_files")
 
 .. note::
 
-  This call may raise **NodeNotFoundError** if any of the given node ids not found in 
-  graph. It is also possible to raise **SameNodeError** if source and target nodes 
+  This call may raise **NodeNotFoundError** if any of the given node ids not found in
+  graph. It is also possible to raise **SameNodeError** if source and target nodes
   are the same.
 
 
@@ -165,13 +166,13 @@ We can add link between two nodes.
 Adding link using autoexploring
 ------------------------------------
 
-It is possible to infer the path that connects two nodes by expanding the given source node. 
+It is possible to infer the path that connects two nodes by expanding the given source node.
 A link will be created if a connection between them is found.
 
 For example we want to link the node "my_hash_1" with the node "my_hash_2", but we have no
-idea how they are connected/related. The algorithm will expand "my_hash_1" using all the 
-available relationships by querying the VirusTotal API. If the algorithm finds the path that 
-connects "my_hash_1" with "my_hash_2", a link will be created using the relationship type 
+idea how they are connected/related. The algorithm will expand "my_hash_1" using all the
+available relationships by querying the VirusTotal API. If the algorithm finds the path that
+connects "my_hash_1" with "my_hash_2", a link will be created using the relationship type
 that relates them.
 
 .. code-block:: python
@@ -190,8 +191,7 @@ relationship has been found, then return True, otherwise False.
 Connecting node with whole graph
 -----------------------------------
 
-We can connect a node with our graph by using the same algorithm that :ref:`add links if match <add_links_if_match>` uses,
-with the difference that this time we will use all graph's nodes instead of just one. 
+We can connect a node with our graph by using the same algorithm that :ref:`add links if match <add_links_if_match>` uses, with the difference that this time we will use all graph's nodes instead of just one. 
 
 .. code-block:: python
 
@@ -200,8 +200,8 @@ with the difference that this time we will use all graph's nodes instead of just
 
 .. warning::
 
-  This call may consumes a lot of API quota. If it is necessary set **max_api_quotas** and
-  **max_depth** to ensure that this method does not consumes more quotas than we want.
+  This call will call multiple times to the API. If it is necessary set **max_api_quotas** and
+  **max_depth** to ensure that this method does not consumes more quotas than your limits.
 
 Deleting link
 -------------------
@@ -220,13 +220,13 @@ or delete all the links in which node is involved:
 
 .. seealso::
 
-  Please check the :ref:`APIReference overview` to take more information about the errors that could be 
+  Please check the :ref:`APIReference overview` to take more information about the errors that could be
   raised by this methods.
 
 Expansions
 ==========================
 
-An expansion is the action to get nodes related somehow to a node.
+An expansion is the action to get related nodes to a node.
 
 .. seealso::
 
@@ -236,14 +236,12 @@ An expansion is the action to get nodes related somehow to a node.
   + `URL <https://developers.virustotal.com/v3/reference/#urls-relationships>`_.
   + `Domain <https://developers.virustotal.com/v3/reference/#domains-relationships>`_.
   + `IP <https://developers.virustotal.com/v3/reference/#ip-relationships>`_.
-  
+
 
 Expanding node by a given expansion
 ----------------------------------------
 
-There is file node with the hash **7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2** and we 
-want to know the domains that the file has contacted with, so we can use VirusTotal API to get the connected domains by 
-expanding the file node using **contacted_domains** as expansion type.
+There is file node with the hash **7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2** and we want to know the domains that the file has contacted with, so we can use VirusTotal API to get the connected domains by expanding the file node using **contacted_domains** as expansion type.
 
 .. code-block:: python
 
@@ -264,7 +262,7 @@ This method adds to the graph the contacted domains returned by VirusTotal API.
 
   max_nodes_per_query = 40, this is the maximum number of nodes that we can request to VirusTotal API per query.
 
-.. seealso:: 
+.. seealso::
   
   Please check :ref:`APIReference overview` for more information.
 
@@ -299,9 +297,9 @@ Alternatively we can expand the whole graph all the levels that we want:
 .. warning::
 
   This call consumes API quota as much as **the number of total expansion of each graph node * max_nodes_per_relationship/max_nodes_per_query**.
-  
-.. seealso:: 
-  
+
+.. seealso::
+
   Please see :ref:`APIReference overview` for more information.
 
 Save
@@ -346,10 +344,10 @@ Clone
 
   This method does not clone the original user/group viewers/editors. It is necessary to call **save_graph()** in order
   to save the cloned graph in VirusTotal.
-  
-  
-.. seealso:: 
-  
+
+
+.. seealso::
+
   Please check :ref:`APIReference overview` for advanced usage.
 
 Utilities
@@ -389,7 +387,7 @@ We can also get an **iframe link** in order to embed the graph in our website.
 .. code-block:: python
 
   >>> vt_graph_api.get_iframe_code()
-  '<iframe src="https://www.virustotal.com/graph/embed/{graph_id}" width="800" height="600"></iframe>'
+  '<iframe src="https://www.virustotal.com/graph/embed/<<graph_id>>" width="800" height="600"></iframe>'
 
 
 Getting API quota consumed

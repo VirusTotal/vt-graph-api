@@ -196,7 +196,7 @@
 </pre></div>
 </div>
 <p>Creates a new graph (replace <strong>&lt;apikey&gt;</strong> with your actual VirusTotal API key):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span> <span class="o">=</span> <span class="n">vt_graph_api</span><span class="o">.</span><span class="n">VTGraph</span><span class="p">(</span><span class="s2">&quot;&lt;apikey&gt;&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;My Graph&quot;</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">user_viewers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alvarogf&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span> <span class="o">=</span> <span class="n">vt_graph_api</span><span class="o">.</span><span class="n">VTGraph</span><span class="p">(</span><span class="s2">&quot;&lt;apikey&gt;&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;My Graph&quot;</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="admonition warning">
@@ -206,7 +206,7 @@
 </div>
 <div class="section" id="nodes">
 <h2>Nodes<a class="headerlink" href="#nodes" title="Permalink to this headline">¶</a></h2>
-<p>Node is the minimum unit of graph information. There’s some basic node types, and we have also the opportunity to represent our own custom node types, so we can specify any type such as “actor” or “email”. The basic node types are the following:</p>
+<p>Nodes are the minimum unit of graph representation. There’s some basic node types, and we have also the opportunity to represent our own custom node types, so we can specify any type such as “actor” or “email”. The basic node types are the following:</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>file</p></li>
@@ -228,11 +228,11 @@ ID with <strong>fetch_vt_enterprise</strong> option, consumes API quota.</p>
 </pre></div>
 </div>
 <p>Or our own custom type:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;alvarogf&quot;</span><span class="p">,</span> <span class="s2">&quot;victim&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;mynode&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;badguy&quot;</span><span class="p">,</span> <span class="s2">&quot;victim&quot;</span><span class="p">)</span><span class="s2">&quot;)</span>
 </pre></div>
 </div>
 <p>We can also specify that we want to fetch information on VirusTotal, about the node we are adding by setting <strong>fetch_information</strong> to True:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;www.virustotal.com&quot;</span><span class="p">,</span> <span class="s2">&quot;domain&quot;</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;mynode&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;www.virustotal.com&quot;</span><span class="p">,</span> <span class="s2">&quot;domain&quot;</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>You can improve the search using <a class="reference external" href="https://www.virustotal.com/gui/intelligence-overview">VirusTotal Intelligence</a>
@@ -256,7 +256,7 @@ receive a node list which is a list of dictionaries with the following structure
     <span class="o">...</span>
 <span class="p">]</span>
 
-<span class="o">&gt;&gt;&gt;</span> <span class="n">graph</span><span class="o">.</span><span class="n">add_nodes</span><span class="p">(</span><span class="n">node_list</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">fetch_vt_enterprise</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">graph</span><span class="o">.</span><span class="n">add_nodes</span><span class="p">(</span><span class="n">node_list</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="admonition seealso">
@@ -265,7 +265,7 @@ receive a node list which is a list of dictionaries with the following structure
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Setting <strong>fetch_vt_enterprise</strong> or <strong>fetch_information</strong> to True, consumes API quota.</p>
+<p>Setting <strong>fetch_information</strong> to True consumes API quota.</p>
 </div>
 </div>
 <div class="section" id="deleting-node">
@@ -273,10 +273,10 @@ receive a node list which is a list of dictionaries with the following structure
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">graph</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="s2">&quot;www.virustotal.com&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>This method will raise <strong>NodeNotFoundError</strong> if the given node id not belongs to the graph.</p>
+<p>This method will raise <strong>NodeNotFoundError</strong> if the given node id does not belong to the graph.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This method also delete every link which have relation with the deleted node.</p>
+<p>This method also deletes every link which have relation with the deleted node.</p>
 </div>
 </div>
 <div class="section" id="checking-if-node-id-belongs-to-graph">
@@ -345,16 +345,15 @@ relationship has been found, then return True, otherwise False.</p>
 </div>
 <div class="section" id="connecting-node-with-whole-graph">
 <h3>Connecting node with whole graph<a class="headerlink" href="#connecting-node-with-whole-graph" title="Permalink to this headline">¶</a></h3>
-<p>We can connect a node with our graph by using the same algorithm that <a class="reference internal" href="#add-links-if-match"><span class="std std-ref">add links if match</span></a> uses,
-with the difference that this time we will use all graph’s nodes instead of just one.</p>
+<p>We can connect a node with our graph by using the same algorithm that <a class="reference internal" href="#add-links-if-match"><span class="std std-ref">add links if match</span></a> uses, with the difference that this time we will use all graph’s nodes instead of just one.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">connect_with_graph</span><span class="p">(</span><span class="s2">&quot;my node&quot;</span><span class="p">)</span>
 <span class="go">True</span>
 </pre></div>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>This call may consumes a lot of API quota. If it is necessary set <strong>max_api_quotas</strong> and
-<strong>max_depth</strong> to ensure that this method does not consumes more quotas than we want.</p>
+<p>This call will call multiple times to the API. If it is necessary set <strong>max_api_quotas</strong> and
+<strong>max_depth</strong> to ensure that this method does not consumes more quotas than your limits.</p>
 </div>
 </div>
 <div class="section" id="deleting-link">
@@ -376,7 +375,7 @@ raised by this methods.</p>
 </div>
 <div class="section" id="expansions">
 <h2>Expansions<a class="headerlink" href="#expansions" title="Permalink to this headline">¶</a></h2>
-<p>An expansion is the action to get nodes related somehow to a node.</p>
+<p>An expansion is the action to get related nodes to a node.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p>Please see VirusTotal documentation in order to check relationship types:</p>
@@ -389,9 +388,7 @@ raised by this methods.</p>
 </div>
 <div class="section" id="expanding-node-by-a-given-expansion">
 <h3>Expanding node by a given expansion<a class="headerlink" href="#expanding-node-by-a-given-expansion" title="Permalink to this headline">¶</a></h3>
-<p>There is file node with the hash <strong>7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2</strong> and we
-want to know the domains that the file has contacted with, so we can use VirusTotal API to get the connected domains by
-expanding the file node using <strong>contacted_domains</strong> as expansion type.</p>
+<p>There is file node with the hash <strong>7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2</strong> and we want to know the domains that the file has contacted with, so we can use VirusTotal API to get the connected domains by expanding the file node using <strong>contacted_domains</strong> as expansion type.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="s2">&quot;7ed0707be56fe3a7f5f2eb1747fdb929bbb9879e6c22b6825da67be5e93b6bd2&quot;</span><span class="p">,</span> <span class="s2">&quot;contacted_domains&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -515,7 +512,7 @@ to save the cloned graph in VirusTotal.</p>
 <h3>Getting iframe<a class="headerlink" href="#getting-iframe" title="Permalink to this headline">¶</a></h3>
 <p>We can also get an <strong>iframe link</strong> in order to embed the graph in our website.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">vt_graph_api</span><span class="o">.</span><span class="n">get_iframe_code</span><span class="p">()</span>
-<span class="go">&#39;&lt;iframe src=&quot;https://www.virustotal.com/graph/embed/{graph_id}&quot; width=&quot;800&quot; height=&quot;600&quot;&gt;&lt;/iframe&gt;&#39;</span>
+<span class="go">&#39;&lt;iframe src=&quot;https://www.virustotal.com/graph/embed/&lt;&lt;graph_id&gt;&gt;&quot; width=&quot;800&quot; height=&quot;600&quot;&gt;&lt;/iframe&gt;&#39;</span>
 </pre></div>
 </div>
 </div>
