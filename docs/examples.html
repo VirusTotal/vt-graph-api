@@ -170,7 +170,7 @@
 
 
 <span class="c1"># Creates the graph.</span>
-<span class="n">graph</span> <span class="o">=</span> <span class="n">VTGraph</span><span class="p">(</span><span class="n">API_KEY</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;First Graph&quot;</span><span class="p">)</span>
+<span class="n">graph</span> <span class="o">=</span> <span class="n">VTGraph</span><span class="p">(</span><span class="n">API_KEY</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;First Graph&quot;</span><span class="p">)</span>
 
 <span class="c1"># Adds the node.</span>
 <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
@@ -202,7 +202,7 @@
 
 <span class="n">API_KEY</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>  <span class="c1"># Add your VT API Key here.</span>
 
-
+<span class="c1"># Make sure you have private graph quota. Otherwise it will fail to save</span>
 <span class="n">graph</span> <span class="o">=</span> <span class="n">VTGraph</span><span class="p">(</span>
     <span class="n">API_KEY</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;First Graph&quot;</span><span class="p">,</span>
     <span class="n">user_editors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;jinfantes&quot;</span><span class="p">],</span> <span class="n">group_viewers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;virustotal&quot;</span><span class="p">])</span>

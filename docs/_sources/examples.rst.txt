@@ -17,7 +17,7 @@ Basic Graph
 
 
     # Creates the graph.
-    graph = VTGraph(API_KEY, verbose=True, private=True, name="First Graph")
+    graph = VTGraph(API_KEY, private=False, name="First Graph")
 
     # Adds the node.
     graph.add_node(
@@ -51,7 +51,7 @@ Advanced Graph
 
     API_KEY = ""  # Add your VT API Key here.
 
-
+    # Make sure you have private graph quota. Otherwise it will fail to save
     graph = VTGraph(
         API_KEY, verbose=False, private=True, name="First Graph",
         user_editors=["jinfantes"], group_viewers=["virustotal"])
