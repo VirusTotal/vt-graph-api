@@ -63,7 +63,7 @@ We can also specify that we want to fetch information on VirusTotal, about the n
 
   >>> graph.add_node("www.virustotal.com", "domain", fetch_information=True)
 
-You can improve the search using `VirusTotal Intelligence <https://www.virustotal.com/gui/intelligence-overview>`_ 
+You can improve the search using `VirusTotal Intelligence <https://www.virustotal.com/gui/intelligence-overview>`_
 by setting **fetch_vt_enterprise** to True.
 
 .. warning::
@@ -130,7 +130,7 @@ Link is a connection between two nodes which represents how and why they are con
 .. note::
 
   If **connection_type** is supplied, a relationship node will be created in VirusTotal Graph UI. Althought there are many
-  relationship types, we have also the opportunity to represent our own custom relationship. It is possible to create a 
+  relationship types, we have also the opportunity to represent our own custom relationship. It is possible to create a
   link without **connection_type** too.
 
 .. seealso::
@@ -180,7 +180,7 @@ that relates them.
   >>> graph.add_links_if_match("source_id", "target_id")
   True
 
-This method uses VirusTotal API to expand nodes in order to find the relationship. If the 
+This method uses VirusTotal API to expand nodes in order to find the relationship. If the
 relationship has been found, then return True, otherwise False.
 
 .. warning::
@@ -191,7 +191,7 @@ relationship has been found, then return True, otherwise False.
 Connecting node with whole graph
 -----------------------------------
 
-We can connect a node with our graph by using the same algorithm that :ref:`add links if match <add_links_if_match>` uses, with the difference that this time we will use all graph's nodes instead of just one. 
+We can connect a node with our graph by using the same algorithm that :ref:`add links if match <add_links_if_match>` uses, with the difference that this time we will use all graph's nodes instead of just one.
 
 .. code-block:: python
 
@@ -208,13 +208,13 @@ Deleting link
 
 Yoy can either delete a single link:
 
-.. code-block::
+.. code-block:: python
 
   >>> graph.delete_link("source_id", "target_id", "connection_type")
 
 or delete all the links in which node is involved:
 
-.. code-block::
+.. code-block:: python
 
   >>> graph.delete_links("source_id")
 
@@ -263,7 +263,7 @@ This method adds to the graph the contacted domains returned by VirusTotal API.
   max_nodes_per_query = 40, this is the maximum number of nodes that we can request to VirusTotal API per query.
 
 .. seealso::
-  
+
   Please check :ref:`APIReference overview` for more information.
 
 Expanding node one level
@@ -395,7 +395,7 @@ Getting API quota consumed
 
 We can get how many API quota we have consumed since the script started
 
-.. code-block::
+.. code-block:: python
 
   >>> graph.get_api_calls()
   1257

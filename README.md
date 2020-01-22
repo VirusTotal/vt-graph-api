@@ -27,6 +27,8 @@ For more information about how to use **vt_graph_api** visit the [documentation]
 You may also want to take a look at some of our [example scripts](https://github.com/VirusTotal/vt-graph-api/tree/master/examples),
 which besides doing useful work for you can be used as a guidance on how to use **vt_graph_api**.
 
+In addition, you can find the documentation for the VirusTotal Graph REST API at the [API reference](https://developers.virustotal.com/v3.0/reference#graphs)
+
 # Test it!
 
 Use tox to test:
