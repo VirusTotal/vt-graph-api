@@ -8,7 +8,7 @@ Welcome to VirusTotal Graph Python API's documentation!
 
 
 `vt_graph_api <https://github.com/VirusTotal/vt-graph-api>`_ is the official Python client library
-for the **VirusTotal Graph** that implements the `VirusTotal Graph REST API <https://developers.virustotal.com/v3.0/reference#graphs>`. This library requires Python 3.2+ or Python 2.7.
+for the **VirusTotal Graph** that implements the `VirusTotal Graph REST API <https://developers.virustotal.com/v3.0/reference#graphs>`_. This library requires Python 3.2+ or Python 2.7.
 
 
 .. toctree::
