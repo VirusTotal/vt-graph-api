@@ -186,8 +186,8 @@
   <div class="section" id="quickstart">
 <h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h1>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Please check <a class="reference external" href="https://www.virustotal.com/gui/graph-overview">VirusTotal Graph overview</a> before start.</p>
+<p class="first admonition-title">Note</p>
+<p class="last">Please check <a class="reference external" href="https://www.virustotal.com/gui/graph-overview">VirusTotal Graph overview</a> before start.</p>
 </div>
 <div class="section" id="basic-usage">
 <h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
@@ -196,12 +196,12 @@
 </pre></div>
 </div>
 <p>Creates a new graph (replace <strong>&lt;apikey&gt;</strong> with your actual VirusTotal API key):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span> <span class="o">=</span> <span class="n">vt_graph_api</span><span class="o">.</span><span class="n">VTGraph</span><span class="p">(</span><span class="s2">&quot;&lt;apikey&gt;&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;My Graph&quot;</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span> <span class="o">=</span> <span class="n">vt_graph_api</span><span class="o">.</span><span class="n">VTGraph</span><span class="p">(</span><span class="s2">&quot;&lt;apikey&gt;&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;My Graph&quot;</span><span class="p">,</span> <span class="n">private</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p><strong>Private graphs</strong> are only allowed for <a class="reference external" href="https://www.virustotal.com/gui/graph-overview">premium users</a>.</p>
+<p class="first admonition-title">Warning</p>
+<p class="last"><strong>Private graphs</strong> are only allowed for <a class="reference external" href="https://www.virustotal.com/gui/graph-overview">premium users</a>.</p>
 </div>
 </div>
 <div class="section" id="nodes">
@@ -209,18 +209,18 @@
 <p>Nodes are the minimum unit of graph representation. There’s some basic node types, and we have also the opportunity to represent our own custom node types, so we can specify any type such as “actor” or “email”. The basic node types are the following:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>file</p></li>
-<li><p>domain</p></li>
-<li><p>ip_address</p></li>
-<li><p>url</p></li>
+<li>file</li>
+<li>domain</li>
+<li>ip_address</li>
+<li>url</li>
 </ul>
 </div></blockquote>
 <p>The difference between basic nodes and custom nodes is that the first ones could be expanded using VirusTotal API.</p>
 <div class="section" id="adding-node">
 <h3>Adding Node<a class="headerlink" href="#adding-node" title="Permalink to this headline">¶</a></h3>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Adding a file node with no sha256 hash, url node with raw URL instead of an VirusTotal URL identifier or unknown
+<p class="first admonition-title">Warning</p>
+<p class="last">Adding a file node with no sha256 hash, url node with raw URL instead of an VirusTotal URL identifier or unknown
 ID with <strong>fetch_vt_enterprise</strong> option, consumes API quota.</p>
 </div>
 <p>We can either add a basic node:</p>
@@ -232,14 +232,14 @@ ID with <strong>fetch_vt_enterprise</strong> option, consumes API quota.</p>
 </pre></div>
 </div>
 <p>We can also specify that we want to fetch information on VirusTotal, about the node we are adding by setting <strong>fetch_information</strong> to True:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;www.virustotal.com&quot;</span><span class="p">,</span> <span class="s2">&quot;domain&quot;</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;www.virustotal.com&quot;</span><span class="p">,</span> <span class="s2">&quot;domain&quot;</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>You can improve the search using <a class="reference external" href="https://www.virustotal.com/gui/intelligence-overview">VirusTotal Intelligence</a>
 by setting <strong>fetch_vt_enterprise</strong> to True.</p>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p><strong>fetch_vt_enterprise</strong> flag is only available for <a class="reference external" href="https://www.virustotal.com/gui/intelligence-overview">premium users</a>.</p>
+<p class="first admonition-title">Warning</p>
+<p class="last"><strong>fetch_vt_enterprise</strong> flag is only available for <a class="reference external" href="https://www.virustotal.com/gui/intelligence-overview">premium users</a>.</p>
 </div>
 <p>If we want to add some nodes at the same time we can use <strong>add_nodes</strong>, this method
 receive a node list which is a list of dictionaries with the following structure:</p>
@@ -256,16 +256,16 @@ receive a node list which is a list of dictionaries with the following structure
     <span class="o">...</span>
 <span class="p">]</span>
 
-<span class="o">&gt;&gt;&gt;</span> <span class="n">graph</span><span class="o">.</span><span class="n">add_nodes</span><span class="p">(</span><span class="n">node_list</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">graph</span><span class="o">.</span><span class="n">add_nodes</span><span class="p">(</span><span class="n">node_list</span><span class="p">,</span> <span class="n">fetch_information</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p>For advanced usage, please check <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a>.</p>
+<p class="first admonition-title">See also</p>
+<p class="last">For advanced usage, please check <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a>.</p>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Setting <strong>fetch_information</strong> to True consumes API quota.</p>
+<p class="first admonition-title">Warning</p>
+<p class="last">Setting <strong>fetch_information</strong> to True consumes API quota.</p>
 </div>
 </div>
 <div class="section" id="deleting-node">
@@ -275,8 +275,8 @@ receive a node list which is a list of dictionaries with the following structure
 </div>
 <p>This method will raise <strong>NodeNotFoundError</strong> if the given node id does not belong to the graph.</p>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This method also deletes every link which have relation with the deleted node.</p>
+<p class="first admonition-title">Note</p>
+<p class="last">This method also deletes every link which have relation with the deleted node.</p>
 </div>
 </div>
 <div class="section" id="checking-if-node-id-belongs-to-graph">
@@ -292,19 +292,19 @@ receive a node list which is a list of dictionaries with the following structure
 <h2>Links<a class="headerlink" href="#links" title="Permalink to this headline">¶</a></h2>
 <p>Link is a connection between two nodes which represents how and why they are connected:</p>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>If <strong>connection_type</strong> is supplied, a relationship node will be created in VirusTotal Graph UI. Althought there are many
+<p class="first admonition-title">Note</p>
+<p class="last">If <strong>connection_type</strong> is supplied, a relationship node will be created in VirusTotal Graph UI. Althought there are many
 relationship types, we have also the opportunity to represent our own custom relationship. It is possible to create a
 link without <strong>connection_type</strong> too.</p>
 </div>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
+<p class="first admonition-title">See also</p>
 <p>Please see VirusTotal documentation in order to check all VirusTotal relationship types:</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#files-relationships">File</a>.</p></li>
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#urls-relationships">URL</a>.</p></li>
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#domains-relationships">Domain</a>.</p></li>
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#ip-relationships">IP</a>.</p></li>
+<ul class="last simple">
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#files-relationships">File</a>.</li>
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#urls-relationships">URL</a>.</li>
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#domains-relationships">Domain</a>.</li>
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#ip-relationships">IP</a>.</li>
 </ul>
 </div>
 <div class="section" id="adding-link">
@@ -316,8 +316,8 @@ link without <strong>connection_type</strong> too.</p>
 </pre></div>
 </div>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This call may raise <strong>NodeNotFoundError</strong> if any of the given node ids not found in
+<p class="first admonition-title">Note</p>
+<p class="last">This call may raise <strong>NodeNotFoundError</strong> if any of the given node ids not found in
 graph. It is also possible to raise <strong>SameNodeError</strong> if source and target nodes
 are the same.</p>
 </div>
@@ -338,8 +338,8 @@ that relates them.</p>
 <p>This method uses VirusTotal API to expand nodes in order to find the relationship. If the
 relationship has been found, then return True, otherwise False.</p>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>This call may consumes a lot of API quota. If it is necessary set <strong>max_api_quotas</strong> and
+<p class="first admonition-title">Warning</p>
+<p class="last">This call may consumes a lot of API quota. If it is necessary set <strong>max_api_quotas</strong> and
 <strong>max_depth</strong> to ensure that this method does not consumes more quotas than we want.</p>
 </div>
 </div>
@@ -351,24 +351,24 @@ relationship has been found, then return True, otherwise False.</p>
 </pre></div>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>This call will call multiple times to the API. If it is necessary set <strong>max_api_quotas</strong> and
+<p class="first admonition-title">Warning</p>
+<p class="last">This call will call multiple times to the API. If it is necessary set <strong>max_api_quotas</strong> and
 <strong>max_depth</strong> to ensure that this method does not consumes more quotas than your limits.</p>
 </div>
 </div>
 <div class="section" id="deleting-link">
 <h3>Deleting link<a class="headerlink" href="#deleting-link" title="Permalink to this headline">¶</a></h3>
 <p>Yoy can either delete a single link:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">delete_link</span><span class="p">(</span><span class="s2">&quot;source_id&quot;</span><span class="p">,</span> <span class="s2">&quot;target_id&quot;</span><span class="p">,</span> <span class="s2">&quot;connection_type&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">delete_link</span><span class="p">(</span><span class="s2">&quot;source_id&quot;</span><span class="p">,</span> <span class="s2">&quot;target_id&quot;</span><span class="p">,</span> <span class="s2">&quot;connection_type&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>or delete all the links in which node is involved:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">delete_links</span><span class="p">(</span><span class="s2">&quot;source_id&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">delete_links</span><span class="p">(</span><span class="s2">&quot;source_id&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p>Please check the <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> to take more information about the errors that could be
+<p class="first admonition-title">See also</p>
+<p class="last">Please check the <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> to take more information about the errors that could be
 raised by this methods.</p>
 </div>
 </div>
@@ -377,13 +377,13 @@ raised by this methods.</p>
 <h2>Expansions<a class="headerlink" href="#expansions" title="Permalink to this headline">¶</a></h2>
 <p>An expansion is the action to get related nodes to a node.</p>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
+<p class="first admonition-title">See also</p>
 <p>Please see VirusTotal documentation in order to check relationship types:</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#files-relationships">File</a>.</p></li>
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#urls-relationships">URL</a>.</p></li>
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#domains-relationships">Domain</a>.</p></li>
-<li><p><a class="reference external" href="https://developers.virustotal.com/v3/reference/#ip-relationships">IP</a>.</p></li>
+<ul class="last simple">
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#files-relationships">File</a>.</li>
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#urls-relationships">URL</a>.</li>
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#domains-relationships">Domain</a>.</li>
+<li><a class="reference external" href="https://developers.virustotal.com/v3/reference/#ip-relationships">IP</a>.</li>
 </ul>
 </div>
 <div class="section" id="expanding-node-by-a-given-expansion">
@@ -394,21 +394,21 @@ raised by this methods.</p>
 </div>
 <p>This method adds to the graph the contacted domains returned by VirusTotal API.</p>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>It is possible to specify the maximum number of nodes returned by the expansion, setting
+<p class="first admonition-title">Note</p>
+<p class="last">It is possible to specify the maximum number of nodes returned by the expansion, setting
 <strong>max_nodes_per_relationship</strong> parameter.</p>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>This call consumes API quota as much as <strong>max_nodes_per_relationship/max_nodes_per_query</strong>.</p>
+<p class="first admonition-title">Warning</p>
+<p class="last">This call consumes API quota as much as <strong>max_nodes_per_relationship/max_nodes_per_query</strong>.</p>
 </div>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>max_nodes_per_query = 40, this is the maximum number of nodes that we can request to VirusTotal API per query.</p>
+<p class="first admonition-title">Note</p>
+<p class="last">max_nodes_per_query = 40, this is the maximum number of nodes that we can request to VirusTotal API per query.</p>
 </div>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p>Please check <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> for more information.</p>
+<p class="first admonition-title">See also</p>
+<p class="last">Please check <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> for more information.</p>
 </div>
 </div>
 <div class="section" id="expanding-node-one-level">
@@ -418,8 +418,8 @@ raised by this methods.</p>
 </pre></div>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>This call consumes API quota as much as <strong>the number of node’s expansions * max_nodes_per_relationship/max_nodes_per_query</strong>.</p>
+<p class="first admonition-title">Warning</p>
+<p class="last">This call consumes API quota as much as <strong>the number of node’s expansions * max_nodes_per_relationship/max_nodes_per_query</strong>.</p>
 </div>
 </div>
 <div class="section" id="expanding-the-whole-graph">
@@ -429,17 +429,17 @@ raised by this methods.</p>
 </pre></div>
 </div>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>As the methods before, we can specify <strong>max_nodes_per_relationship</strong> and <strong>max_nodes</strong> to ensure that we will not take
+<p class="first admonition-title">Note</p>
+<p class="last">As the methods before, we can specify <strong>max_nodes_per_relationship</strong> and <strong>max_nodes</strong> to ensure that we will not take
 more nodes than necessary.</p>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>This call consumes API quota as much as <strong>the number of total expansion of each graph node * max_nodes_per_relationship/max_nodes_per_query</strong>.</p>
+<p class="first admonition-title">Warning</p>
+<p class="last">This call consumes API quota as much as <strong>the number of total expansion of each graph node * max_nodes_per_relationship/max_nodes_per_query</strong>.</p>
 </div>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p>Please see <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> for more information.</p>
+<p class="first admonition-title">See also</p>
+<p class="last">Please see <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> for more information.</p>
 </div>
 </div>
 </div>
@@ -450,8 +450,8 @@ more nodes than necessary.</p>
 </pre></div>
 </div>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>At this point if the Graph is set public it will be searchable in VirusTotal UI.</p>
+<p class="first admonition-title">Note</p>
+<p class="last">At this point if the Graph is set public it will be searchable in VirusTotal UI.</p>
 </div>
 </div>
 <div class="section" id="load">
@@ -462,12 +462,12 @@ more nodes than necessary.</p>
 </div>
 <p>We can retrieve graphs that we are viewer, editor or owner.</p>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>We cannot modify and save the loaded graph if we have no editor permissions.</p>
+<p class="first admonition-title">Warning</p>
+<p class="last">We cannot modify and save the loaded graph if we have no editor permissions.</p>
 </div>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p>Please see also <strong>clone_graph</strong> method.</p>
+<p class="first admonition-title">See also</p>
+<p class="last">Please see also <strong>clone_graph</strong> method.</p>
 </div>
 </div>
 <div class="section" id="clone">
@@ -476,13 +476,13 @@ more nodes than necessary.</p>
 </pre></div>
 </div>
 <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>This method does not clone the original user/group viewers/editors. It is necessary to call <strong>save_graph()</strong> in order
+<p class="first admonition-title">Warning</p>
+<p class="last">This method does not clone the original user/group viewers/editors. It is necessary to call <strong>save_graph()</strong> in order
 to save the cloned graph in VirusTotal.</p>
 </div>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p>Please check <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> for advanced usage.</p>
+<p class="first admonition-title">See also</p>
+<p class="last">Please check <a class="reference internal" href="apireference.html#apireference-overview"><span class="std std-ref">API Reference</span></a> for advanced usage.</p>
 </div>
 </div>
 <div class="section" id="utilities">
@@ -519,7 +519,7 @@ to save the cloned graph in VirusTotal.</p>
 <div class="section" id="getting-api-quota-consumed">
 <h3>Getting API quota consumed<a class="headerlink" href="#getting-api-quota-consumed" title="Permalink to this headline">¶</a></h3>
 <p>We can get how many API quota we have consumed since the script started</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">get_api_calls</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">get_api_calls</span><span class="p">()</span>
 <span class="go">1257</span>
 </pre></div>
 </div>
