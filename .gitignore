@@ -33,6 +33,7 @@ MANIFEST
 
 # IDE
 .vscode/*
+.idea/
 
 # Installer logs
 pip-log.txt
