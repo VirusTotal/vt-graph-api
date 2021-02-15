@@ -12,11 +12,13 @@ import collections
 import functools
 import json
 import logging
+import os
 import threading
 
 import concurrent.futures
 import requests
 import six
+import shutil
 import vt_graph_api.errors
 import vt_graph_api.helpers
 import vt_graph_api.node
@@ -1691,3 +1693,40 @@ class VTGraph(object):
         "<iframe src=\"https://www.virustotal.com/graph/embed/" +
         "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
         .format(graph_id=self.graph_id))
+
+  def download_screenshot(self, path = "."):
+    """Downloads a screenshot of the graph.
+
+    Args:
+      path: Path where screenshot will be saved.
+
+    Raises:
+      vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
+      vt_graph_api.errors.DownloadScreenshotError: if screenshot can't be downloaded.
+
+    """
+    if not self.graph_id:
+      raise vt_graph_api.errors.SaveGraphError(
+          "`save_graph` has not been called yet!")
+
+    url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/screenshot".format(
+        graph_id=self.graph_id
+    )
+
+    r = requests.get(
+        url,
+        headers=self._get_headers(),
+        stream=True)
+
+    if r.status_code == 200:
+      r.raw.decode_content = True
+      filename = "{graph_id}.jpg".format(graph_id=self.graph_id)
+      file_path = os.path.join(path, filename)
+      with open(file_path,'wb') as f:
+        shutil.copyfileobj(r.raw, f)
+    else:
+      raise vt_graph_api.errors.DownloadScreenshotError(
+          "Couldn't download screenshot for graph {graph_id}".format(
+              graph_id=self.graph_id
+          )
+      )

@@ -43,3 +43,6 @@ class InvalidJSONError(Exception):
 
 class LoadError(Exception):
   pass
+
+class DownloadScreenshotError(Exception):
+  pass
