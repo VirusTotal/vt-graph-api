@@ -1720,7 +1720,7 @@ class VTGraph(object):
 
     if r.status_code == 200:
       r.raw.decode_content = True
-      filename = f"{self.graph_id}.jpg"
+      filename = "{graph_id}.jpg".format(graph_id=self.graph_id)
       file_path = os.path.join(path, filename)
       with open(file_path,'wb') as f:
         shutil.copyfileobj(r.raw, f)
