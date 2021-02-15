@@ -1709,7 +1709,9 @@ class VTGraph(object):
       raise vt_graph_api.errors.SaveGraphError(
           "`save_graph` has not been called yet!")
 
-    url = f"https://www.virustotal.com/api/v3/graphs/{self.graph_id}/screenshot"
+    url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/screenshot".format(
+        graph_id=self.graph_id
+    )
 
     r = requests.get(
         url,
@@ -1724,5 +1726,7 @@ class VTGraph(object):
         shutil.copyfileobj(r.raw, f)
     else:
       raise vt_graph_api.errors.DownloadScreenshotError(
-          f"Couldn't download screenshot for graph {self.graph_id}"
+          "Couldn't download screenshot for graph {graph_id}".format(
+              graph_id=self.graph_id
+          )
       )
