@@ -38,6 +38,10 @@ Use tox to test:
 ```
 
 # Changelog
+
+### V1.1.0
+- Added download graph screenshot from VirusTotal.
+
 ### V1.0.1
 - Fixing documentation.
 
