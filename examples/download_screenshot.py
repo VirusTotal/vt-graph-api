@@ -11,5 +11,3 @@ graph = vt_graph_api.VTGraph.load_graph(GRAPH_ID, API_KEY)
 
 # Download screenshot
 graph.download_screenshot(path="./screenshots")
-
-
