@@ -39,6 +39,10 @@ Use tox to test:
 
 # Changelog
 
+### V1.1.1
+- Bug fixing.
+- Fixing documentation.
+
 ### V1.1.0
 - Added download graph screenshot from VirusTotal.
 
