@@ -908,7 +908,7 @@ class VTGraph(object):
 
     cursor = has_more.get("cursor")
     if cursor:
-      next_max = max_nodes_per_relationship - len(data["data"])
+      next_max = max_nodes_per_relationship - len(new_nodes)
       if next_max > 0:
         return self._get_expansion_nodes(
             node, expansion, max_nodes_per_relationship=next_max,
