@@ -39,6 +39,9 @@ Use tox to test:
 
 # Changelog
 
+### V1.1.2
+- Bug fixing.
+
 ### V1.1.1
 - Bug fixing.
 - Fixing documentation.
