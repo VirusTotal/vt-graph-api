@@ -187,3 +187,21 @@ def test_expand_n_level(mocker):
   assert not test_graph.expand_n_level(1)
   assert test_graph.expand_one_level.call_count == len(test_graph.nodes)
   mocker.resetall()
+
+def test_expand_node_that_returns_itself_in_the_expansion(mocker):
+  rq_id = "7c11c7ccd384fd9f377da499fc059fa08fdc33a1bb870b5bc3812d24dd421a16"
+  request_data = {
+      "data": [
+          {
+              "attributes": {},
+              "id": rq_id,
+              "type": "file"
+          }
+      ]
+  }
+  m = mocker.Mock(status_code=200, json=mocker.Mock(return_value=request_data))
+  mocker.patch("requests.get", return_value=m)
+  test_graph.add_node(rq_id, "file", label="Investigation Node File")
+  test_graph.expand(rq_id, "similar_files")
+  assert not (rq_id, rq_id, "similar_files") in test_graph.links
+  mocker.resetall()
