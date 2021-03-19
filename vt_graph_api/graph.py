@@ -1495,6 +1495,14 @@ class VTGraph(object):
             node.node_id, node.node_type, fetch_information=False,
             node_attributes=node.attributes)
         self.add_link(node_id, node.node_id, expansion)
+      else:
+        self._log(
+            "Ignored expansion result: {node_id} for expansion type: {expansion}."
+            "Source and target are the same node."
+              .format(
+                node_id=node.node_id, expansion=expansion),
+            logging.INFO
+        )
     return expansion_nodes
 
   def expand_one_level(self, node_id, max_nodes_per_relationship=40):
