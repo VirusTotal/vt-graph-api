@@ -1497,8 +1497,8 @@ class VTGraph(object):
         self.add_link(node_id, node.node_id, expansion)
       else:
         self._log(
-            "Ignored expansion result: {node_id} for expansion type: {expansion}."
-            "Source and target are the same node."
+            "Ignored expansion result: {node_id} for expansion type:"
+            "{expansion}. Source and target are the same node."
               .format(
                 node_id=node.node_id, expansion=expansion),
             logging.INFO
