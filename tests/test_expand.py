@@ -205,6 +205,3 @@ def test_expand_node_that_returns_itself_in_the_expansion(mocker):
   test_graph.expand(rq_id, "similar_files")
   assert not (rq_id, rq_id, "similar_files") in test_graph.links
   mocker.resetall()
-
-
-
