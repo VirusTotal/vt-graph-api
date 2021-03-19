@@ -1490,10 +1490,11 @@ class VTGraph(object):
         node, expansion, max_nodes_per_relationship)
     # Adds data to graph.
     for node in expansion_nodes:
-      self.add_node(
-          node.node_id, node.node_type, fetch_information=False,
-          node_attributes=node.attributes)
-      self.add_link(node_id, node.node_id, expansion)
+      if node.node_id != node_id:
+        self.add_node(
+            node.node_id, node.node_type, fetch_information=False,
+            node_attributes=node.attributes)
+        self.add_link(node_id, node.node_id, expansion)
     return expansion_nodes
 
   def expand_one_level(self, node_id, max_nodes_per_relationship=40):
