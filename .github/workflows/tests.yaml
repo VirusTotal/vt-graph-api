@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '${{ matrix.python-version }}'
-      - name: Install tox
-        run: pip install pytest pytest-mock==1.10.4 coverage futures
+      - name: Install dependencies
+        run: pip install pytest pytest-mock==1.10.4 coverage requests six futures
       - name: Test with pytest
         run: pytest
