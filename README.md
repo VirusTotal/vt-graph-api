@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.com/VirusTotal/vt-graph-api.svg?branch=master)](https://travis-ci.com/VirusTotal/vt-graph-api)
-
 # VirusTotal Graph API
 
 VirusTotal Graph API allows you programatically interact with VirusTotal dataset.
