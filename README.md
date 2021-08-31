@@ -1,3 +1,5 @@
+![Tests](https://github.com/VirusTotal/vt-graph-api/actions/workflows/tests.yaml/badge.svg)
+
 # VirusTotal Graph API
 
 VirusTotal Graph API allows you programatically interact with VirusTotal dataset.
