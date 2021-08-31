@@ -21,6 +21,6 @@ jobs:
         with:
           python-version: '${{ matrix.python-version }}'
       - name: Install tox
-        run: pip install tox
-      - name: Test with tox 
-        run: tox
+        run: pip install pytest pytest-mock==1.10.4 coverage futures
+      - name: Test with pytest
+        run: pytest
