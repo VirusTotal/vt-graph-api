@@ -474,7 +474,7 @@ class VTGraph(object):
     url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/viewers".format(
         graph_id=self.graph_id)
     response = requests.post(
-        url, headers=self._get_headers(), data=json.dumps({"data": data}))
+        url, headers=self._get_headers(), json={"data": data})
 
     if response.status_code != requests.codes.ok:
       raise vt_graph_api.errors.CollaboratorNotFoundError()
@@ -542,7 +542,7 @@ class VTGraph(object):
     url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/editors".format(
         graph_id=self.graph_id)
     response = requests.post(
-        url, headers=self._get_headers(), data=json.dumps({"data": data}))
+        url, headers=self._get_headers(), json={"data": data})
 
     if response.status_code != requests.codes.ok:
       raise vt_graph_api.errors.CollaboratorNotFoundError()
@@ -561,11 +561,11 @@ class VTGraph(object):
       url = "https://www.virustotal.com/api/v3/graphs/{graph_id}".format(
           graph_id=self.graph_id)
       response = requests.patch(
-          url, headers=self._get_headers(), data=json.dumps(output))
+          url, headers=self._get_headers(), json=output)
     else:
       url = "https://www.virustotal.com/api/v3/graphs"
       response = requests.post(
-          url, headers=self._get_headers(), data=json.dumps(output))
+          url, headers=self._get_headers(), json=output)
     if response.status_code != 200:
       self._log(
           "Saving graph error: {status_code} status code."
