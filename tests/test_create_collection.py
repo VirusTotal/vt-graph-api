@@ -17,10 +17,10 @@ def test_create_collection(mocker):
   test_graph.add_node("virustotal.com", "domain")
   collection_url = test_graph.create_collection()
   assert collection_url == ("https://www.virustotal.com/gui/collection/"
-    "{collection_url}".format(collection_url))
+    "{collection_url}".format(collection_url=collection_url))
 
 
-def test_create_collection_fails():
+def test_create_collection_fails(mocker):
   m = mocker.Mock(status_code=400, json=mocker.Mock({}))
   mocker.patch("requests.post", return_value=m)
   test_graph.add_node("virustotal.com", "domain")
