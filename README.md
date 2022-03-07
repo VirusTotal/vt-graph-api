@@ -43,9 +43,40 @@ Use tox to test:
 - Removed `carbonblack_children` and `carbonblack_parent` relationships in File entity.
 - Create a Collection from a Graph.
 - Added **new entity** types:
-  - Collection
-  - Reference
-- Added **new relationships:
+  - collection
+  - reference
+  - whois
+  - ssl_cert
+- Added **new relationships**:
+  - Files: *dropped_files, collections, email_attachments, itw_ips, overlay_children, pe_resource_children, references, urls_for_embedded_js*
+  - Domains: *historical_ssl_certificates,
+    historical_whois,
+    caa_records,
+    cname_records,
+    mx_records,
+    ns_records,
+    soa_records,
+    collections,
+    references.*
+  - IP Addresses: *historical_ssl_certificates,
+    historical_whois,
+    collections,
+    references.*
+  - Urls: *contacted_domains,
+    contacted_ips,
+    redirects_to,
+    urls_related_by_tracker_id,
+    communicating_files,
+    referrer_files,
+    embedded_js_files,
+    collections,
+    references*
+  - Collections: *files,
+    domains,
+    ip_addresses,
+    urls,
+    references.*
+  - Whois: *network_location.*
 
 ### V1.1.3
 - Bug fixing.
