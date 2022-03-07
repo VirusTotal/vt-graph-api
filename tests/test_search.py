@@ -328,6 +328,7 @@ EXPANSION_SIDE_EFFECTS = {
         "contacted_urls": {
             "data": []
         },
+        "dropped_files": {"data":[]},
         "email_parents": {
             "data": []
         },
