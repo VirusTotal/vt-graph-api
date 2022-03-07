@@ -287,7 +287,6 @@ EXPANSION_SIDE_EFFECTS = {
             ]
         },
         "collections": { "data": [] },
-        "references": {"data": []},
         "compressed_parents": {
             "data": [
                 {
@@ -332,6 +331,7 @@ EXPANSION_SIDE_EFFECTS = {
         "email_parents": {
             "data": []
         },
+        "email_attachments": {"data":[]},
         "embedded_domains": {
             "data": [
                 {
@@ -413,9 +413,11 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+        "itw_ips": {"data":[]},
         "overlay_parents": {
             "data": []
         },
+        "overlay_children": {"data":[]},
         "pcap_parents": {
             "data": [
                 {
@@ -464,10 +466,12 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
-
+        "pe_resource_children": {"data":[]},
+        "references": {"data": []},
         "similar_files": {
             "data": []
         },
+        "urls_for_embedded_js": {"data":[]},
     },
     # Intermediate node will achieve target node in his fifth expansion.
     INTERMEDIATE_NODE_ID: {
@@ -481,12 +485,7 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
-        "carbonblack_children": {
-            "data": []
-        },
-        "carbonblack_parents": {
-            "data": []
-        },
+        "collections": {"data": []},
         "compressed_parents": {
             "data": []
         },
@@ -499,9 +498,11 @@ EXPANSION_SIDE_EFFECTS = {
         "contacted_urls": {
             "data": []
         },
+        "dropped_files": {"data":[]},
         "email_parents": {
             "data": []
         },
+        "email_attachments": {"data":[]},
         "embedded_domains": {
             "data": [
                 {
@@ -511,7 +512,6 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
-
         "embedded_urls": {
             "data": [
                 {
@@ -584,9 +584,11 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+        "itw_ips": {"data":[]},
         "overlay_parents": {
             "data": []
         },
+        "overlay_children": {"data":[]},
         "pcap_parents": {
             "data": [
                 {
@@ -635,9 +637,12 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+        "pe_resource_children": {"data":[]},
+        "references": {"data": []},
         "similar_files": {
             "data": []
         },
+        "urls_for_embedded_js": {"data":[]},
     }
 }
 
