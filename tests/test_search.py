@@ -287,7 +287,7 @@ EXPANSION_SIDE_EFFECTS = {
             ]
         },
         "collections": { "data": [] },
-        "references": {"data": []}
+        "references": {"data": []},
         "compressed_parents": {
             "data": [
                 {
