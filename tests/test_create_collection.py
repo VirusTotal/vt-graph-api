@@ -16,8 +16,8 @@ def test_create_collection(mocker):
   mocker.patch("requests.post", return_value=m)
   test_graph.add_node("virustotal.com", "domain")
   collection_url = test_graph.create_collection()
-  assert collection_url == ("https://www.virustotal.com/gui/collection/"
-    "{collection_url}".format(collection_url=collection_url))
+  assert collection_url == "https://www.virustotal.com/gui/collection/new_collection"
+)
 
 
 def test_create_collection_fails(mocker):
