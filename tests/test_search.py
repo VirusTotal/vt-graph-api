@@ -286,19 +286,8 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
-        "carbonblack_children": {
-            "data": []
-        },
-        "carbonblack_parents": {
-            "data": [
-                {
-                    "attributes": {},
-                    "id": "fb0b6044347e972e21b6c376e37e1115dab494a2c" +
-                          "6b9fb28b92b1e45b45d0ebc",
-                    "type": "file"
-                }
-            ]
-        },
+        "collections": { "data": [] },
+        "references": {"data": []}
         "compressed_parents": {
             "data": [
                 {
@@ -475,6 +464,7 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+
         "similar_files": {
             "data": []
         },
