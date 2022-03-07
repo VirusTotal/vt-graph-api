@@ -45,9 +45,6 @@ Use tox to test:
 - Added **new entity** types:
   - Collection
   - Reference
-  - Threat Actor
-  - Attack Technique
-  - Attack Tactic
 
 ### V1.1.3
 - Bug fixing.
