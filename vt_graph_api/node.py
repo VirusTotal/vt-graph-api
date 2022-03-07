@@ -39,7 +39,7 @@ class Node(object):
     "domain", 
     "ip_address",
     "whois",
-    "sslCert",
+    "ssl_cert",
     "collection",
     "reference"
   )
@@ -131,7 +131,7 @@ class Node(object):
           "references"
       ],
       "whois": ["network_location"],
-      "sslCert": []
+      "ssl_cert": []
   }
 
   def __init__(self, node_id, node_type, x=0, y=0):

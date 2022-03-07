@@ -45,6 +45,7 @@ Use tox to test:
 - Added **new entity** types:
   - Collection
   - Reference
+- Added **new relationships:
 
 ### V1.1.3
 - Bug fixing.
