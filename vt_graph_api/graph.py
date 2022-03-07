@@ -48,6 +48,7 @@ class VTGraph(object):
   MAX_API_EXPANSION_LIMIT = 40
   MAX_PARALLEL_REQUESTS = 1000
   REQUEST_TIMEOUT = 40
+  COLLECTIONS_ALLOWED_NODE_TYPES = set(["file", "domain", "ip_address", "url"])
 
   @staticmethod
   def is_viewer(vt_user, graph_id, api_key):
@@ -1739,3 +1740,65 @@ class VTGraph(object):
               graph_id=self.graph_id
           )
       )
+
+  def _get_nodes_by_type(self, node_type):
+    return {"data": [
+        {'type': node.node_type, 'id': node.node_id}
+        for node in self.nodes.values() if node.node_type == node_type
+    ]}
+
+  def create_collection(self, name=None, description=None):
+    """Creates a VT Collection taking entities from current Graph.
+
+    Args:
+      name: Collection name.
+      description: Collection description
+
+    Raises:
+      vt_graph_api.errors.CreateCollectionError: if the collection couldn't be
+        created
+
+    Returns:
+      str: VirusTotal UI Collection link.
+    """
+
+    data = {
+        "type": "collection",
+        "attributes": {
+          "name": name if name else "Collection created from VT Graph API",
+        },
+        "relationships": {
+          "files": self._get_nodes_by_type('file'),
+          "domains": self._get_nodes_by_type('domain'),
+          "urls": self._get_nodes_by_type('url'),
+          "ip_addresses": self._get_nodes_by_type('ip_address')
+        }
+    }
+
+    if description:
+      data["attributes"]["description"] = description
+    elif self.graph_id:
+      data["attributes"]["description"] = (
+          "Collection created from graph {graph_id}").format(
+          graph_id=self.graph_id)
+
+    url = "https://www.virustotal.com/api/v3/collections"
+    response = requests.post(
+        url, headers=self._get_headers(), json={"data": data})
+
+    if(response.status_code != 200):
+      print(response.json())
+      raise vt_graph_api.errors.CreateCollectionError()
+
+    collection_id = response.json()["data"]["id"]
+
+    return "https://www.virustotal.com/gui/collection/{collection_id}".format(
+        collection_id=collection_id
+    )
+
+
+
+
+
+
+

@@ -33,36 +33,60 @@ class Node(object):
       expansion type.
   """
 
-  SUPPORTED_NODE_TYPES = ("file", "url", "domain", "ip_address")
+  SUPPORTED_NODE_TYPES = (
+    "file",
+    "url", 
+    "domain", 
+    "ip_address",
+    "whois",
+    "sslCert",
+    "collection",
+    "reference"
+  )
   NODE_EXPANSIONS = {
       "file": [
           "bundled_files",
-          "carbonblack_children",
-          "carbonblack_parents",
+          "collections",
           "compressed_parents",
           "contacted_domains",
           "contacted_ips",
           "contacted_urls",
+          "dropped_files",
           "email_parents",
+          "email_attachments",
           "embedded_domains",
           "embedded_urls",
           "embedded_ips",
           "execution_parents",
           "itw_domains",
           "itw_urls",
+          "itw_ips",
           "overlay_parents",
+          "overlay_children",
           "pcap_parents",
           "pe_resource_parents",
+          "pe_resource_children",
+          "references",
           "similar_files",
+          "urls_for_embedded_js"
       ],
       "url": [
           "downloaded_files",
           "last_serving_ip_address",
           "network_location",
           "redirecting_urls",
+          "contacted_domains",
+          "contacted_ips",
+          "redirects_to",
+          "urls_related_by_tracker_id",
+          "communicating_files",
+          "referrer_files",
+          "embedded_js_files",
+          "collections",
+          "references"
       ],
       "domain": [
-          "inmediate_parent",
+          "immediate_parent",
           "parent",
           "communicating_files",
           "downloaded_files",
@@ -71,6 +95,15 @@ class Node(object):
           "siblings",
           "subdomains",
           "urls",
+          "historical_ssl_certificates",
+          "historical_whois",
+          "caa_records",
+          "cname_records",
+          "mx_records",
+          "ns_records",
+          "soa_records",
+          "collections",
+          "references"
       ],
       "ip_address": [
           "communicating_files",
@@ -78,7 +111,27 @@ class Node(object):
           "referrer_files",
           "resolutions",
           "urls",
-      ]
+          "historical_ssl_certificates",
+          "historical_whois",
+          "collections",
+          "references"
+      ],
+      "reference": [
+          "files",
+          "domains",
+          "urls",
+          "ip_addresses",
+          "collections"
+      ],
+      "collection": [
+          "files",
+          "domains",
+          "ip_addresses",
+          "urls",
+          "references"
+      ],
+      "whois": ["network_location"],
+      "sslCert": []
   }
 
   def __init__(self, node_id, node_type, x=0, y=0):

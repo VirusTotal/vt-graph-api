@@ -39,6 +39,16 @@ Use tox to test:
 
 # Changelog
 
+### V2.0.0
+- Removed `carbonblack_children` and `carbonblack_parent` relationships in File entity.
+- Create a Collection from a Graph.
+- Added **new entity** types:
+  - Collection
+  - Reference
+  - Threat Actor
+  - Attack Technique
+  - Attack Tactic
+
 ### V1.1.3
 - Bug fixing.
 

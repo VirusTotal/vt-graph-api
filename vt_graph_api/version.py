@@ -4,5 +4,5 @@ This module provides version information.
 """
 
 
-__version__ = '1.1.3'
+__version__ = '2.0.0'
 __x_tool__ = 'Graph'
