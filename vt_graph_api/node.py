@@ -41,9 +41,6 @@ class Node(object):
     "whois",
     "sslCert",
     "collection",
-    "threat_actor",
-    "attack_technique",
-    "attack_tactic",
     "reference"
   )
   NODE_EXPANSIONS = {
@@ -119,42 +116,22 @@ class Node(object):
           "collections",
           "references"
       ],
-      "attack_technique": [
-          "references",
-          "collections",
-          "threat_actors",
-          "parent_technique",
-          "attack_tactics"
-      ],
-      "attack_tactic": [
-          "attack_techniques",
-      ],
       "reference": [
           "files",
           "domains",
           "urls",
           "ip_addresses",
-          "collections",
-          "threat_actors",
-          "attack_techniques"
+          "collections"
       ],
       "collection": [
           "files",
           "domains",
           "ip_addresses",
           "urls",
-          "threat_actors",
-          "references",
-          "attack_techniques"
+          "references"
       ],
       "whois": ["network_location"],
-      "sslCert": [],
-      "threat_actor": [
-          "collections",
-          "references",
-          "attack_techniques"
-      ]
-
+      "sslCert": []
   }
 
   def __init__(self, node_id, node_type, x=0, y=0):
