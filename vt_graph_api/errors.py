@@ -46,3 +46,6 @@ class LoadError(Exception):
 
 class DownloadScreenshotError(Exception):
   pass
+
+class CreateCollectionError(Exception):
+  pass

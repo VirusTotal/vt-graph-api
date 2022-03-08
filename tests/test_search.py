@@ -286,19 +286,7 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
-        "carbonblack_children": {
-            "data": []
-        },
-        "carbonblack_parents": {
-            "data": [
-                {
-                    "attributes": {},
-                    "id": "fb0b6044347e972e21b6c376e37e1115dab494a2c" +
-                          "6b9fb28b92b1e45b45d0ebc",
-                    "type": "file"
-                }
-            ]
-        },
+        "collections": { "data": [] },
         "compressed_parents": {
             "data": [
                 {
@@ -340,9 +328,11 @@ EXPANSION_SIDE_EFFECTS = {
         "contacted_urls": {
             "data": []
         },
+        "dropped_files": {"data":[]},
         "email_parents": {
             "data": []
         },
+        "email_attachments": {"data":[]},
         "embedded_domains": {
             "data": [
                 {
@@ -424,9 +414,11 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+        "itw_ips": {"data":[]},
         "overlay_parents": {
             "data": []
         },
+        "overlay_children": {"data":[]},
         "pcap_parents": {
             "data": [
                 {
@@ -475,9 +467,12 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+        "pe_resource_children": {"data":[]},
+        "references": {"data": []},
         "similar_files": {
             "data": []
         },
+        "urls_for_embedded_js": {"data":[]},
     },
     # Intermediate node will achieve target node in his fifth expansion.
     INTERMEDIATE_NODE_ID: {
@@ -491,12 +486,7 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
-        "carbonblack_children": {
-            "data": []
-        },
-        "carbonblack_parents": {
-            "data": []
-        },
+        "collections": {"data": []},
         "compressed_parents": {
             "data": []
         },
@@ -509,9 +499,11 @@ EXPANSION_SIDE_EFFECTS = {
         "contacted_urls": {
             "data": []
         },
+        "dropped_files": {"data":[]},
         "email_parents": {
             "data": []
         },
+        "email_attachments": {"data":[]},
         "embedded_domains": {
             "data": [
                 {
@@ -521,7 +513,6 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
-
         "embedded_urls": {
             "data": [
                 {
@@ -594,9 +585,11 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+        "itw_ips": {"data":[]},
         "overlay_parents": {
             "data": []
         },
+        "overlay_children": {"data":[]},
         "pcap_parents": {
             "data": [
                 {
@@ -645,9 +638,12 @@ EXPANSION_SIDE_EFFECTS = {
                 }
             ]
         },
+        "pe_resource_children": {"data":[]},
+        "references": {"data": []},
         "similar_files": {
             "data": []
         },
+        "urls_for_embedded_js": {"data":[]},
     }
 }
 
@@ -719,41 +715,51 @@ def test_search_connection_second_level_real_data(mocker):
   # Check that _get_expansion_nodes was called with the correct arguments.
   calls = [
       call(node_a, "bundled_files", 40),
-      call(node_a, "carbonblack_children", 40),
-      call(node_a, "carbonblack_parents", 40),
+      call(node_a, "collections", 40),
       call(node_a, "compressed_parents", 40),
       call(node_a, "contacted_domains", 40),
       call(node_a, "contacted_ips", 40),
       call(node_a, "contacted_urls", 40),
+      call(node_a, "dropped_files", 40),
       call(node_a, "email_parents", 40),
+      call(node_a, "email_attachments", 40),
       call(node_a, "embedded_domains", 40),
       call(node_a, "embedded_urls", 40),
       call(node_a, "embedded_ips", 40),
       call(node_a, "execution_parents", 40),
       call(node_a, "itw_domains", 40),
       call(node_a, "itw_urls", 40),
+      call(node_a, "itw_ips", 40),
       call(node_a, "overlay_parents", 40),
+      call(node_a, "overlay_children", 40),
       call(node_a, "pcap_parents", 40),
       call(node_a, "pe_resource_parents", 40),
+      call(node_a, "pe_resource_children", 40),
       call(node_a, "similar_files", 40),
+      call(node_a, "urls_for_embedded_js", 40),
       call(intermediate_node, "bundled_files", 40),
-      call(intermediate_node, "carbonblack_children", 40),
-      call(intermediate_node, "carbonblack_parents", 40),
+      call(intermediate_node, "collections", 40),
       call(intermediate_node, "compressed_parents", 40),
       call(intermediate_node, "contacted_domains", 40),
       call(intermediate_node, "contacted_ips", 40),
       call(intermediate_node, "contacted_urls", 40),
+      call(intermediate_node, "dropped_files", 40),
       call(intermediate_node, "email_parents", 40),
+      call(intermediate_node, "email_attachments", 40),
       call(intermediate_node, "embedded_domains", 40),
       call(intermediate_node, "embedded_urls", 40),
       call(intermediate_node, "embedded_ips", 40),
       call(intermediate_node, "execution_parents", 40),
       call(intermediate_node, "itw_domains", 40),
       call(intermediate_node, "itw_urls", 40),
+      call(intermediate_node, "itw_ips", 40),
       call(intermediate_node, "overlay_parents", 40),
+      call(intermediate_node, "overlay_children", 40),
       call(intermediate_node, "pcap_parents", 40),
       call(intermediate_node, "pe_resource_parents", 40),
+      call(intermediate_node, "pe_resource_children", 40),
       call(intermediate_node, "similar_files", 40),
+      call(intermediate_node, "urls_for_embedded_js", 40),
   ]
   test_graph._get_expansion_nodes.assert_has_calls(calls, any_order=True)
   total_expansion_calls = 0
