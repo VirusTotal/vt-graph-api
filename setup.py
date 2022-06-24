@@ -30,7 +30,7 @@ install_requires = [
     "six"
 ]
 
-if(sys.version_info.major == 2):
+if sys.version_info.major < 3:
   # Support enums in python 2.
   install_requires.append("enum34")
 
