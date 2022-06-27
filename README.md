@@ -39,6 +39,9 @@ Use tox to test:
 
 # Changelog
 
+### V2.1.0
+- Support for setting Graph representation.
+
 ### V2.0.0
 - Removed `carbonblack_children` and `carbonblack_parent` relationships in File entity.
 - Create a Collection from a Graph.

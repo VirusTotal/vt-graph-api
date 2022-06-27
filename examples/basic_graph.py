@@ -1,7 +1,7 @@
 """Basic VTGraph usage example."""
 
 
-from vt_graph_api import VTGraph
+from vt_graph_api import VTGraph, RepresentationType
 
 
 API_KEY = ""  # Insert your VT API here.
@@ -17,6 +17,9 @@ graph.add_node(
 
 # Expands the graph 1 level.
 graph.expand_n_level(level=1, max_nodes_per_relationship=5, max_nodes=100)
+
+# Set representation type
+graph.set_representation(RepresentationType.FORCE_GRAPH)
 
 # Saves the graph
 graph.save_graph()

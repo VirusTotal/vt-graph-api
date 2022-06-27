@@ -24,6 +24,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip 
           pip install pytest pytest-mock==1.10.4 pytest-cov coverage requests six futures
+      - name: Install enum
+        run: pip install enum34
+        if: ${{ matrix.python-version == 2.7 }}
       - name: Install python/typing
         run: pip install typing
         if: ${{ matrix.python-version == 3.4 }} 

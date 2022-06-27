@@ -15,6 +15,8 @@ import logging
 import os
 import threading
 
+from enum import Enum
+
 import concurrent.futures
 import requests
 import six
@@ -23,6 +25,11 @@ import vt_graph_api.errors
 import vt_graph_api.helpers
 import vt_graph_api.node
 import vt_graph_api.version
+
+
+class RepresentationType(str, Enum):
+  FORCE_GRAPH = "force_graph"
+  TREE = "tree"
 
 
 class VTGraph(object):
@@ -217,6 +224,7 @@ class VTGraph(object):
     self.group_editors = group_editors or []
     self.group_viewers = group_viewers or []
     self.verbose = verbose
+    self.representation = RepresentationType.FORCE_GRAPH
 
     self.nodes = {}
     self.links = {}
@@ -1611,6 +1619,7 @@ class VTGraph(object):
                 "private": self.private,
                 "nodes": [],
                 "links": [],
+                "representation": self.representation
             },
             "type": "graph",
         },
@@ -1795,6 +1804,14 @@ class VTGraph(object):
     return "https://www.virustotal.com/gui/collection/{collection_id}".format(
         collection_id=collection_id
     )
+
+  def set_representation(self, representation):
+    """Sets Graph representation.
+
+    Args:
+      representation: Graph representation. See :py:class::`RepresentationType`.
+    """
+    self.representation = representation
 
 
 

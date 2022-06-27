@@ -30,6 +30,10 @@ install_requires = [
     "six"
 ]
 
+if sys.version_info.major == 2:
+  # Support enums in python 2.
+  install_requires.append("enum34")
+
 setuptools.setup(
     name="vt_graph_api",
     version=version,
