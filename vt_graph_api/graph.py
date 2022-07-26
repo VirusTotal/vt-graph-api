@@ -148,6 +148,10 @@ class VTGraph(object):
     graph._add_group_nodes_from_json_data(nodes)
     # Adds group links from json data
     graph._add_group_links_from_json_data(links)
+    # Adds intelligence nodes from json_data
+    graph._add_intelligence_nodes_from_json_data(nodes)
+    # Adds intelligence links from json data
+    graph._add_intelligence_links_from_json_data(links)
     # Adds nodes to the graph.
     graph._add_nodes_from_json_graph_data(nodes)
     # Adds links to the graph.
@@ -234,6 +238,8 @@ class VTGraph(object):
     self.links = {}
     self.group_nodes = {}
     self.group_links = {}
+    self.intelligence_nodes = {}
+    self.intelligence_links = {}
 
     self._id_references = {}
     self._api_calls_lock = threading.Lock()
@@ -402,13 +408,17 @@ class VTGraph(object):
       # It is necessary to clean the given links because they have relationship
       # nodes
 
-      non_group_links = [link for link in json_graph_data_links if
-                         link['source'] not in self.group_nodes and link[
-                           'target'] not in self.group_nodes]
+      non_special_relationship_links = [
+          link for link in json_graph_data_links if
+          link['source'] not in self.group_nodes and link[
+            'source'] not in self.intelligence_nodes and link[
+            'target'] not in self.intelligence_nodes and link[
+            'target'] not in self.group_nodes
+      ]
 
       replace_nodes = {}
       relationship_links = (
-          link_ for link_ in non_group_links
+          link_ for link_ in non_special_relationship_links
           if link_["source"].startswith("relationship"))
       for link in relationship_links:
         if link["source"] not in replace_nodes:
@@ -417,7 +427,7 @@ class VTGraph(object):
           replace_nodes[link["source"]].append(link["target"])
 
       non_relationship_links = (
-          link for link in non_group_links
+          link for link in non_special_relationship_links
           if not link["source"].startswith("relationship"))
 
       for link_data in non_relationship_links:
@@ -462,6 +472,18 @@ class VTGraph(object):
     self.group_links = [link for link in json_graph_data_links if
                         link['source'] in self.group_nodes or link[
                           'target'] in self.group_nodes]
+
+  def _add_intelligence_nodes_from_json_data(self, json_graph_data_nodes):
+    self.intelligence_nodes = dict([
+        (node['entity_id'], node) for node in json_graph_data_nodes
+        if node.get("type") == "relationship" and node.get(
+            "entity_attributes", {}).get("relationship_type") == "intelligence"])
+
+  def _add_intelligence_links_from_json_data(self, json_graph_data_links):
+    self.intelligence_links = [link for link in json_graph_data_links if
+                               link['source'] in self.intelligence_nodes or
+                               link[
+                                 'target'] in self.intelligence_nodes]
 
   def _pull_viewers(self):
     """Pull graph's users and groups viewers from VT API.
@@ -1708,6 +1730,16 @@ class VTGraph(object):
       self._add_node_to_output(output, node_id)
       added.add(node_id)
 
+    intelligence_nodes = self._get_intelligence_nodes()
+    output_nodes = output["data"]["attributes"]["nodes"]
+    output["data"]["attributes"]["nodes"] = [*output_nodes, *intelligence_nodes]
+    for node in intelligence_nodes:
+      added.add(node['entity_id'])
+
+    intelligence_links = self._get_intelligence_links(added)
+    output_links = output["data"]["attributes"]["links"]
+    output["data"]["attributes"]["links"] = [*output_links, *intelligence_links]
+
     group_nodes = self._get_groups_nodes(added)
     output_nodes = output["data"]["attributes"]["nodes"]
     output["data"]["attributes"]["nodes"] = [*output_nodes, *group_nodes]
@@ -1825,6 +1857,13 @@ class VTGraph(object):
     return [link for link in self.group_links if
             link['source'] in final_nodes and link['target'] in final_nodes]
 
+  def _get_intelligence_nodes(self):
+    return list(self.intelligence_nodes.values())
+
+  def _get_intelligence_links(self, final_nodes):
+    return [link for link in self.intelligence_links if
+            link['source'] in final_nodes and link['target'] in final_nodes]
+
   def create_collection(self, name=None, description=None):
     """Creates a VT Collection taking entities from current Graph.
 
@@ -1882,12 +1921,3 @@ class VTGraph(object):
     """
     self.representation = representation
 
-
-if __name__ == "__main__":
-  import os
-
-  graph = VTGraph.load_graph(
-      "gb49cd88b5e6c46198623e84ed6e39c0378c661fb599d443b8170e2abb789ab65",
-      api_key=os.environ["VT_API_KEY"])
-
-  graph.save_graph()
