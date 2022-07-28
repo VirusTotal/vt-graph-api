@@ -417,7 +417,7 @@ class VTGraph(object):
       relationship_links = []
       non_relationship_links = []
       for link in non_special_relationship_links:
-        if link_["source"].startswith("relationship"):
+        if link["source"].startswith("relationship"):
           relationship_links.append(link)
         else:
           non_relationship_links.append(link)
@@ -2050,7 +2050,6 @@ class VTGraph(object):
                 node_id=node_id))
 
     # Check if nodes are already in a group.
-    nodes_already_in_a_group = set()
     for group_node in self.group_nodes.values():
       for node_id in group_node["entity_attributes"]["grouped_node_ids"]:
         if node_id in node_ids_set:
@@ -2058,18 +2057,18 @@ class VTGraph(object):
               "Node {node_id} is already in a group.".format(
                   node_id=node_id))
 
-          relationship_node = {
-              "entity_id": "relationships_group_{group_id}".format(
-                  group_id=group_node_id),
-              "type": 'relationship',
-              "entity_attributes": {
-                  "grouped_node_ids": node_ids,
-                  "relationship_type": "group"
-              },
-              "text": group_name
-          }
+    relationship_node = {
+        "entity_id": "relationships_group_{group_id}".format(
+            group_id=group_node_id),
+        "type": 'relationship',
+        "entity_attributes": {
+            "grouped_node_ids": node_ids,
+            "relationship_type": "group"
+        },
+        "text": group_name
+    }
 
-          self.group_nodes[group_node_id] = relationship_node
+    self.group_nodes[group_node_id] = relationship_node
 
   def set_representation(self, representation):
     """Sets Graph representation.
