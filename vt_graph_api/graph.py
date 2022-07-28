@@ -406,27 +406,28 @@ class VTGraph(object):
       # It is necessary to clean the given links because they have relationship
       # nodes
 
-      non_special_relationship_links = [
+      non_special_relationship_links = (
           link for link in json_graph_data_links if
           link['source'] not in self.group_nodes and link[
             'source'] not in self.special_relationship_nodes and link[
             'target'] not in self.special_relationship_nodes and link[
             'target'] not in self.group_nodes
-      ]
+      )
+
+      relationship_links = []
+      non_relationship_links = []
+      for link in non_special_relationship_links:
+        if link_["source"].startswith("relationship"):
+          relationship_links.append(link)
+        else:
+          non_relationship_links.append(link)
 
       replace_nodes = {}
-      relationship_links = (
-          link_ for link_ in non_special_relationship_links
-          if link_["source"].startswith("relationship"))
       for link in relationship_links:
         if link["source"] not in replace_nodes:
           replace_nodes[link["source"]] = [link["target"]]
         else:
           replace_nodes[link["source"]].append(link["target"])
-
-      non_relationship_links = (
-          link for link in non_special_relationship_links
-          if not link["source"].startswith("relationship"))
 
       for link_data in non_relationship_links:
         linked_nodes = replace_nodes.get(
@@ -462,6 +463,23 @@ class VTGraph(object):
         if node.get("type") == "relationship" and node.get(
             "entity_attributes", {}).get("relationship_type") == "group"])
 
+  def _is_special_relationship_node(self, node):
+    """Checks if a node is a special relationship node.
+
+    Args:
+      node: node to be checked.
+
+    Returns: boolean
+
+    """
+    is_relationship_node = node.get("type") == "relationship"
+    entity_attributes = node.get("entity_attributes", {})
+    relationship_type = entity_attributes.get("relationship_type")
+    is_commonalities = entity_attributes.get("commonalities") is not None
+
+    return is_relationship_node and (
+        relationship_type and relationship_type != "group") or is_commonalities
+
   def _add_special_relationship_nodes_from_json_data(self,
       json_graph_data_nodes):
     """Add all the special relationship nodes from the given data.
@@ -479,20 +497,10 @@ class VTGraph(object):
           "y": ""
       }
     """
-    special_relationship_nodes = []
-
-    for node in json_graph_data_nodes:
-      is_relationship_node = node.get("type") == "relationship"
-      entity_attributes = node.get("entity_attributes", {})
-      relationship_type = entity_attributes.get("relationship_type")
-      is_commonalities = entity_attributes.get("commonalities") is not None
-
-      if (is_relationship_node and
-          (relationship_type and relationship_type != "group") or
-          is_commonalities):
-        special_relationship_nodes.append((node['entity_id'], node))
-
-    self.special_relationship_nodes = dict(special_relationship_nodes)
+    self.special_relationship_nodes = dict([
+        (node['entity_id'], node) for node in json_graph_data_nodes if
+        self._is_special_relationship_node(node)
+    ])
 
   def _add_special_links_from_json_data(self, json_graph_data_links):
     """Add all the special relationship links from the given data.
@@ -1759,40 +1767,34 @@ class VTGraph(object):
       self._add_node_to_output(output, node_id)
       added.add(node_id)
 
-    special_relationship_nodes = self._get_special_relationship_nodes()
-    output_nodes = output["data"]["attributes"]["nodes"]
-    output["data"]["attributes"][
-      "nodes"] = output_nodes + special_relationship_nodes
+    special_relationship_nodes = self._get_special_relationship_nodes(
+        len(added))
     for node in special_relationship_nodes:
+      output["data"]["attributes"]["nodes"].append(node)
       added.add(node['entity_id'])
 
     special_relationship_links = self._get_special_relationship_links(added)
-    output_links = output["data"]["attributes"]["links"]
-    output["data"]["attributes"][
-      "links"] = output_links + special_relationship_links
+    output["data"]["attributes"]["links"] += special_relationship_links
 
     group_nodes = self._get_groups_nodes(added)
-    output_nodes = output["data"]["attributes"]["nodes"]
-    output["data"]["attributes"]["nodes"] = output_nodes + group_nodes
     for node in group_nodes:
+      output["data"]["attributes"]["nodes"].append(node)
       added.add(node['entity_id'])
 
     final_links = output["data"]["attributes"]["links"]
     group_links = self._get_groups_links(final_links)
-    output["data"]["attributes"]["links"] = final_links + group_links
+    output["data"]["attributes"]["links"] += group_links
 
     self._push_graph_to_vt(output)
     self._push_editors()
     self._push_viewers()
     self._index = 0
 
-
   def get_api_calls(self):
     """Get api counter in thread safe mode."""
     with self._api_calls_lock:
       api_calls = self._api_calls
     return api_calls
-
 
   def get_ui_link(self):
     """Return VirusTotal UI link for the graph.
@@ -1810,7 +1812,6 @@ class VTGraph(object):
           "`save_graph` has not been called yet!")
     return "https://www.virustotal.com/graph/{graph_id}".format(
         graph_id=self.graph_id)
-
 
   def get_iframe_code(self):
     """Return VirusTotal UI iframe for the graph.
@@ -1830,7 +1831,6 @@ class VTGraph(object):
         "<iframe src=\"https://www.virustotal.com/graph/embed/" +
         "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
         .format(graph_id=self.graph_id))
-
 
   def download_screenshot(self, path="."):
     """Downloads a screenshot of the graph.
@@ -1869,35 +1869,41 @@ class VTGraph(object):
           )
       )
 
-
   def _get_nodes_by_type(self, node_type):
     return {"data": [
         {'type': node.node_type, 'id': node.node_id}
         for node in self.nodes.values() if node.node_type == node_type
     ]}
 
-
   def _get_groups_nodes(self, final_nodes):
-    """Returns all the loaded and generated group nodes.
+    """This method must be called only just before saving the graph.
+    It returns all the loaded and generated group nodes. It checks that
+    the nodes that belong to the group have been added to the graph, and deletes
+    the ids that have not finally been added.
+
+    In case a Group Node doesn't have any belonging node in the Graph, it is not
+    returned.
 
     Args:
-      final_nodes: Set with the ids of all the added nodes.
+      final_nodes: Set with the ids of all the added nodes to the Graph.
 
     Returns: Array of group nodes.
 
     """
     group_nodes = []
-    current_index = len(final_nodes)
+    next_index = len(final_nodes)
+    # Delete nodes belonging to group nodes that have not been added to the Graph.
+    # Inject Node index.
     for idx, group_node in enumerate(self.group_nodes.values()):
       belonging_nodes = group_node['entity_attributes']['grouped_node_ids']
       belonging_nodes = list(
-          set([node for node in belonging_nodes if node in final_nodes]))
-      if (belonging_nodes):
+          set(node for node in belonging_nodes if node in final_nodes))
+      if belonging_nodes:
         group_node['entity_attributes']['grouped_node_ids'] = belonging_nodes
-        group_node['index'] = current_index + idx
+        group_node['index'] = next_index
+        next_index += 1
         group_nodes.append(group_node)
     return group_nodes
-
 
   def _get_groups_links(self, final_links):
     """Generates all the links needed to represent groups in VTGraph.
@@ -1931,15 +1937,26 @@ class VTGraph(object):
         group_links.append(new_link)
     return group_links
 
+  def _get_special_relationship_nodes(self, next_index):
+    """
+    Returns a list with the special relationship nodes, and injects nodes
+    index. Only used for saving the Graph.
+    Args:
+      next_index: Next index to be injected.
 
-  def _get_special_relationship_nodes(self):
-    """Returns a list with the special relationship nodes."""
-    return list(self.special_relationship_nodes.values())
+    Returns:
 
+    """
+    special_relationship_nodes = []
+    for idx, node in self.special_relationship_nodes.values():
+      node['index'] = next_index + idx
+      special_relationship_nodes.append(node)
+    return special_relationship_nodes
 
   def _get_special_relationship_links(self, final_nodes):
     """Returns links needed to represent special relationship nodes.
-    It checks if the link connections exist or not.
+    It checks if the link connections exist or not. Only used for saving the
+    Graph.
 
     Args:
       final_nodes: Set with all the nodes added
@@ -1949,7 +1966,6 @@ class VTGraph(object):
     """
     return [link for link in self.special_relationship_links if
             link['source'] in final_nodes and link['target'] in final_nodes]
-
 
   def create_collection(self, name=None, description=None):
     """Creates a VT Collection taking entities from current Graph.
@@ -2000,10 +2016,8 @@ class VTGraph(object):
         collection_id=collection_id
     )
 
-
   def _generate_group_node_id(self, nodes_id):
     return ",".join(nodes_id).replace("=", "")
-
 
   def create_group(self, node_ids, group_name):
     """
@@ -2014,7 +2028,10 @@ class VTGraph(object):
 
     Returns:
 
-    Raises: CreateGroupError if the
+    Raises: CreateGroupError if:
+      - Group doesn't contain any node.
+      - Group contains a node that is already in another group.
+      - Group contains a node that is not in the Graph.
 
     """
     group_node_id = self._generate_group_node_id(node_ids)
@@ -2036,27 +2053,23 @@ class VTGraph(object):
     nodes_already_in_a_group = set()
     for group_node in self.group_nodes.values():
       for node_id in group_node["entity_attributes"]["grouped_node_ids"]:
-        nodes_already_in_a_group.add(node_id)
+        if node_id in node_ids_set:
+          raise vt_graph_api.errors.CreateGroupError(
+              "Node {node_id} is already in a group.".format(
+                  node_id=node_id))
 
-    intersection = nodes_already_in_a_group.intersection(node_ids)
-    if (len(intersection) > 0):
-      raise vt_graph_api.errors.CreateGroupError(
-          "Nodes {intersection} are already in groups.".format(
-              intersection=",".join(list(intersection))))
+          relationship_node = {
+              "entity_id": "relationships_group_{group_id}".format(
+                  group_id=group_node_id),
+              "type": 'relationship',
+              "entity_attributes": {
+                  "grouped_node_ids": node_ids,
+                  "relationship_type": "group"
+              },
+              "text": group_name
+          }
 
-    relationship_node = {
-        "entity_id": "relationships_group_{group_id}".format(
-            group_id=group_node_id),
-        "type": 'relationship',
-        "entity_attributes": {
-            "grouped_node_ids": node_ids,
-            "relationship_type": "group"
-        },
-        "text": group_name
-    }
-
-    self.group_nodes[group_node_id] = relationship_node
-
+          self.group_nodes[group_node_id] = relationship_node
 
   def set_representation(self, representation):
     """Sets Graph representation.

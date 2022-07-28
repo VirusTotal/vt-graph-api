@@ -30,7 +30,7 @@ def test_create_group_with_nodes_already_grouped():
   test_graph.create_group(['virustotal.com', 'google.com'], 'Group 1')
 
   with pytest.raises(vt_graph_api.errors.CreateGroupError,
-                     match=r"Nodes .+ are already in groups."):
+                     match=r"Node .+ is already in a group."):
     test_graph.create_group(['virustotal.com', 'google.com'], "Group 1")
 
 
@@ -43,7 +43,7 @@ def test_create_group_with_node_that_does_not_exist():
 
   with pytest.raises(vt_graph_api.errors.CreateGroupError,
                      match=r"Node hola.es is not in the Graph."):
-    test_graph.create_group(['virustotal.com', 'hola.es'], "Group 1")
+    test_graph.create_group(['hola.es'], "Group 1")
 
 
 def test_create_group(mocker):
@@ -62,7 +62,8 @@ def test_create_group(mocker):
 
   # Assert group relationship node is generated
   group_node = event_mocked.call_args[0][0]['data']['attributes']['nodes'][-1]
-  assert set(group_node['entity_attributes']['grouped_node_ids']) == {'virustotal.com', 'google.com'}
+  assert set(group_node['entity_attributes']['grouped_node_ids']) == {
+      'virustotal.com', 'google.com'}
   assert len(group_node['entity_attributes']['grouped_node_ids']) == 2
 
   # Assert group relationship links are generated
