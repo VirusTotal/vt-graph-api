@@ -1787,281 +1787,281 @@ class VTGraph(object):
     self._index = 0
 
 
-def get_api_calls(self):
-  """Get api counter in thread safe mode."""
-  with self._api_calls_lock:
-    api_calls = self._api_calls
-  return api_calls
+  def get_api_calls(self):
+    """Get api counter in thread safe mode."""
+    with self._api_calls_lock:
+      api_calls = self._api_calls
+    return api_calls
 
 
-def get_ui_link(self):
-  """Return VirusTotal UI link for the graph.
+  def get_ui_link(self):
+    """Return VirusTotal UI link for the graph.
 
-  Requires that save_graph was called.
+    Requires that save_graph was called.
 
-  Raises:
-    vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
+    Raises:
+      vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
 
-  Returns:
-      str: VirusTotal UI link.
-  """
-  if not self.graph_id:
-    raise vt_graph_api.errors.SaveGraphError(
-        "`save_graph` has not been called yet!")
-  return "https://www.virustotal.com/graph/{graph_id}".format(
-      graph_id=self.graph_id)
-
-
-def get_iframe_code(self):
-  """Return VirusTotal UI iframe for the graph.
-
-  Requires that save_graph was called.
-
-  Raises:
-    vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
-
-  Returns:
-      str: VirusTotal UI iframe.
-  """
-  if not self.graph_id:
-    raise vt_graph_api.errors.SaveGraphError(
-        "`save_graph` has not been called yet!")
-  return (
-      "<iframe src=\"https://www.virustotal.com/graph/embed/" +
-      "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
-      .format(graph_id=self.graph_id))
+    Returns:
+        str: VirusTotal UI link.
+    """
+    if not self.graph_id:
+      raise vt_graph_api.errors.SaveGraphError(
+          "`save_graph` has not been called yet!")
+    return "https://www.virustotal.com/graph/{graph_id}".format(
+        graph_id=self.graph_id)
 
 
-def download_screenshot(self, path="."):
-  """Downloads a screenshot of the graph.
+  def get_iframe_code(self):
+    """Return VirusTotal UI iframe for the graph.
 
-  Args:
-    path: Path where screenshot will be saved.
+    Requires that save_graph was called.
 
-  Raises:
-    vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
-    vt_graph_api.errors.DownloadScreenshotError: if screenshot can't be downloaded.
+    Raises:
+      vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
 
-  """
-  if not self.graph_id:
-    raise vt_graph_api.errors.SaveGraphError(
-        "`save_graph` has not been called yet!")
+    Returns:
+        str: VirusTotal UI iframe.
+    """
+    if not self.graph_id:
+      raise vt_graph_api.errors.SaveGraphError(
+          "`save_graph` has not been called yet!")
+    return (
+        "<iframe src=\"https://www.virustotal.com/graph/embed/" +
+        "{graph_id}\" width=\"800\" height=\"600\"></iframe>"
+        .format(graph_id=self.graph_id))
 
-  url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/screenshot".format(
-      graph_id=self.graph_id
-  )
 
-  r = requests.get(
-      url,
-      headers=self._get_headers(),
-      stream=True)
+  def download_screenshot(self, path="."):
+    """Downloads a screenshot of the graph.
 
-  if r.status_code == 200:
-    r.raw.decode_content = True
-    filename = "{graph_id}.jpg".format(graph_id=self.graph_id)
-    file_path = os.path.join(path, filename)
-    with open(file_path, 'wb') as f:
-      shutil.copyfileobj(r.raw, f)
-  else:
-    raise vt_graph_api.errors.DownloadScreenshotError(
-        "Couldn't download screenshot for graph {graph_id}".format(
-            graph_id=self.graph_id
-        )
+    Args:
+      path: Path where screenshot will be saved.
+
+    Raises:
+      vt_graph_api.errors.SaveGraphError: if `save_graph` was not called.
+      vt_graph_api.errors.DownloadScreenshotError: if screenshot can't be downloaded.
+
+    """
+    if not self.graph_id:
+      raise vt_graph_api.errors.SaveGraphError(
+          "`save_graph` has not been called yet!")
+
+    url = "https://www.virustotal.com/api/v3/graphs/{graph_id}/screenshot".format(
+        graph_id=self.graph_id
+    )
+
+    r = requests.get(
+        url,
+        headers=self._get_headers(),
+        stream=True)
+
+    if r.status_code == 200:
+      r.raw.decode_content = True
+      filename = "{graph_id}.jpg".format(graph_id=self.graph_id)
+      file_path = os.path.join(path, filename)
+      with open(file_path, 'wb') as f:
+        shutil.copyfileobj(r.raw, f)
+    else:
+      raise vt_graph_api.errors.DownloadScreenshotError(
+          "Couldn't download screenshot for graph {graph_id}".format(
+              graph_id=self.graph_id
+          )
+      )
+
+
+  def _get_nodes_by_type(self, node_type):
+    return {"data": [
+        {'type': node.node_type, 'id': node.node_id}
+        for node in self.nodes.values() if node.node_type == node_type
+    ]}
+
+
+  def _get_groups_nodes(self, final_nodes):
+    """Returns all the loaded and generated group nodes.
+
+    Args:
+      final_nodes: Set with the ids of all the added nodes.
+
+    Returns: Array of group nodes.
+
+    """
+    group_nodes = []
+    current_index = len(final_nodes)
+    for idx, group_node in enumerate(self.group_nodes.values()):
+      belonging_nodes = group_node['entity_attributes']['grouped_node_ids']
+      belonging_nodes = list(
+          set([node for node in belonging_nodes if node in final_nodes]))
+      if (belonging_nodes):
+        group_node['entity_attributes']['grouped_node_ids'] = belonging_nodes
+        group_node['index'] = current_index + idx
+        group_nodes.append(group_node)
+    return group_nodes
+
+
+  def _get_groups_links(self, final_links):
+    """Generates all the links needed to represent groups in VTGraph.
+
+    Args:
+      final_links: list with all the links added in the Graph.
+
+    Returns: List with the links needed to represent groups in VTGraph.
+
+    """
+    map_node_group = {}
+
+    # Generate a link for each pair node_in_group -> group_node
+    for group_node in self.group_nodes.values():
+      for node_in_group in group_node['entity_attributes']['grouped_node_ids']:
+        map_node_group[node_in_group] = group_node['entity_id']
+
+    group_links = [{'source': node, 'target': group, 'connection_type': 'group'}
+                   for node, group in map_node_group.items()]
+
+    # Generate a link for each link where source or target is a node
+    # inside a group.
+    for link in final_links:
+      if link['source'] in map_node_group:
+        new_link = link.copy()
+        new_link['source'] = map_node_group[link['source']]
+        group_links.append(new_link)
+      elif link['target'] in map_node_group:
+        new_link = link.copy()
+        new_link['target'] = map_node_group[link['target']]
+        group_links.append(new_link)
+    return group_links
+
+
+  def _get_special_relationship_nodes(self):
+    """Returns a list with the special relationship nodes."""
+    return list(self.special_relationship_nodes.values())
+
+
+  def _get_special_relationship_links(self, final_nodes):
+    """Returns links needed to represent special relationship nodes.
+    It checks if the link connections exist or not.
+
+    Args:
+      final_nodes: Set with all the nodes added
+
+    Returns: list of links related to special_relationship_nodes.
+
+    """
+    return [link for link in self.special_relationship_links if
+            link['source'] in final_nodes and link['target'] in final_nodes]
+
+
+  def create_collection(self, name=None, description=None):
+    """Creates a VT Collection taking entities from current Graph.
+
+    Args:
+      name: Collection name.
+      description: Collection description
+
+    Raises:
+      vt_graph_api.errors.CreateCollectionError: if the collection couldn't be
+        created
+
+    Returns:
+      str: VirusTotal UI Collection link.
+    """
+
+    data = {
+        "type": "collection",
+        "attributes": {
+            "name": name if name else "Collection created from VT Graph API",
+        },
+        "relationships": {
+            "files": self._get_nodes_by_type('file'),
+            "domains": self._get_nodes_by_type('domain'),
+            "urls": self._get_nodes_by_type('url'),
+            "ip_addresses": self._get_nodes_by_type('ip_address')
+        }
+    }
+
+    if description:
+      data["attributes"]["description"] = description
+    elif self.graph_id:
+      data["attributes"]["description"] = (
+          "Collection created from graph {graph_id}").format(
+          graph_id=self.graph_id)
+
+    url = "https://www.virustotal.com/api/v3/collections"
+    response = requests.post(
+        url, headers=self._get_headers(), json={"data": data})
+
+    if (response.status_code != 200):
+      print(response.json())
+      raise vt_graph_api.errors.CreateCollectionError()
+
+    collection_id = response.json()["data"]["id"]
+
+    return "https://www.virustotal.com/gui/collection/{collection_id}".format(
+        collection_id=collection_id
     )
 
 
-def _get_nodes_by_type(self, node_type):
-  return {"data": [
-      {'type': node.node_type, 'id': node.node_id}
-      for node in self.nodes.values() if node.node_type == node_type
-  ]}
+  def _generate_group_node_id(self, nodes_id):
+    return ",".join(nodes_id).replace("=", "")
 
 
-def _get_groups_nodes(self, final_nodes):
-  """Returns all the loaded and generated group nodes.
+  def create_group(self, node_ids, group_name):
+    """
 
-  Args:
-    final_nodes: Set with the ids of all the added nodes.
+    Args:
+      node_ids:
+      group_name:
 
-  Returns: Array of group nodes.
+    Returns:
 
-  """
-  group_nodes = []
-  current_index = len(final_nodes)
-  for idx, group_node in enumerate(self.group_nodes.values()):
-    belonging_nodes = group_node['entity_attributes']['grouped_node_ids']
-    belonging_nodes = list(
-        set([node for node in belonging_nodes if node in final_nodes]))
-    if (belonging_nodes):
-      group_node['entity_attributes']['grouped_node_ids'] = belonging_nodes
-      group_node['index'] = current_index + idx
-      group_nodes.append(group_node)
-  return group_nodes
+    Raises: CreateGroupError if the
 
+    """
+    group_node_id = self._generate_group_node_id(node_ids)
+    node_ids_set = set(node_ids)
 
-def _get_groups_links(self, final_links):
-  """Generates all the links needed to represent groups in VTGraph.
-
-  Args:
-    final_links: list with all the links added in the Graph.
-
-  Returns: List with the links needed to represent groups in VTGraph.
-
-  """
-  map_node_group = {}
-
-  # Generate a link for each pair node_in_group -> group_node
-  for group_node in self.group_nodes.values():
-    for node_in_group in group_node['entity_attributes']['grouped_node_ids']:
-      map_node_group[node_in_group] = group_node['entity_id']
-
-  group_links = [{'source': node, 'target': group, 'connection_type': 'group'}
-                 for node, group in map_node_group.items()]
-
-  # Generate a link for each link where source or target is a node
-  # inside a group.
-  for link in final_links:
-    if link['source'] in map_node_group:
-      new_link = link.copy()
-      new_link['source'] = map_node_group[link['source']]
-      group_links.append(new_link)
-    elif link['target'] in map_node_group:
-      new_link = link.copy()
-      new_link['target'] = map_node_group[link['target']]
-      group_links.append(new_link)
-  return group_links
-
-
-def _get_special_relationship_nodes(self):
-  """Returns a list with the special relationship nodes."""
-  return list(self.special_relationship_nodes.values())
-
-
-def _get_special_relationship_links(self, final_nodes):
-  """Returns links needed to represent special relationship nodes.
-  It checks if the link connections exist or not.
-
-  Args:
-    final_nodes: Set with all the nodes added
-
-  Returns: list of links related to special_relationship_nodes.
-
-  """
-  return [link for link in self.special_relationship_links if
-          link['source'] in final_nodes and link['target'] in final_nodes]
-
-
-def create_collection(self, name=None, description=None):
-  """Creates a VT Collection taking entities from current Graph.
-
-  Args:
-    name: Collection name.
-    description: Collection description
-
-  Raises:
-    vt_graph_api.errors.CreateCollectionError: if the collection couldn't be
-      created
-
-  Returns:
-    str: VirusTotal UI Collection link.
-  """
-
-  data = {
-      "type": "collection",
-      "attributes": {
-          "name": name if name else "Collection created from VT Graph API",
-      },
-      "relationships": {
-          "files": self._get_nodes_by_type('file'),
-          "domains": self._get_nodes_by_type('domain'),
-          "urls": self._get_nodes_by_type('url'),
-          "ip_addresses": self._get_nodes_by_type('ip_address')
-      }
-  }
-
-  if description:
-    data["attributes"]["description"] = description
-  elif self.graph_id:
-    data["attributes"]["description"] = (
-        "Collection created from graph {graph_id}").format(
-        graph_id=self.graph_id)
-
-  url = "https://www.virustotal.com/api/v3/collections"
-  response = requests.post(
-      url, headers=self._get_headers(), json={"data": data})
-
-  if (response.status_code != 200):
-    print(response.json())
-    raise vt_graph_api.errors.CreateCollectionError()
-
-  collection_id = response.json()["data"]["id"]
-
-  return "https://www.virustotal.com/gui/collection/{collection_id}".format(
-      collection_id=collection_id
-  )
-
-
-def _generate_group_node_id(self, nodes_id):
-  return ",".join(nodes_id).replace("=", "")
-
-
-def create_group(self, node_ids, group_name):
-  """
-
-  Args:
-    node_ids:
-    group_name:
-
-  Returns:
-
-  Raises: CreateGroupError if the
-
-  """
-  group_node_id = self._generate_group_node_id(node_ids)
-  node_ids_set = set(node_ids)
-
-  # Check if the user has provided node ids
-  if not node_ids:
-    raise vt_graph_api.errors.CreateGroupError(
-        "A group must contain at least one node.")
-
-  # Check if all the nodes exists.
-  for node_id in node_ids_set:
-    if node_id not in self.nodes:
+    # Check if the user has provided node ids
+    if not node_ids:
       raise vt_graph_api.errors.CreateGroupError(
-          "Node {node_id} is not in the Graph.".format(
-              node_id=node_id))
+          "A group must contain at least one node.")
 
-  # Check if nodes are already in a group.
-  nodes_already_in_a_group = set()
-  for group_node in self.group_nodes.values():
-    for node_id in group_node["entity_attributes"]["grouped_node_ids"]:
-      nodes_already_in_a_group.add(node_id)
+    # Check if all the nodes exists.
+    for node_id in node_ids_set:
+      if node_id not in self.nodes:
+        raise vt_graph_api.errors.CreateGroupError(
+            "Node {node_id} is not in the Graph.".format(
+                node_id=node_id))
 
-  intersection = nodes_already_in_a_group.intersection(node_ids)
-  if (len(intersection) > 0):
-    raise vt_graph_api.errors.CreateGroupError(
-        "Nodes {intersection} are already in groups.".format(
-            intersection=",".join(list(intersection))))
+    # Check if nodes are already in a group.
+    nodes_already_in_a_group = set()
+    for group_node in self.group_nodes.values():
+      for node_id in group_node["entity_attributes"]["grouped_node_ids"]:
+        nodes_already_in_a_group.add(node_id)
 
-  relationship_node = {
-      "entity_id": "relationships_group_{group_id}".format(
-          group_id=group_node_id),
-      "type": 'relationship',
-      "entity_attributes": {
-          "grouped_node_ids": node_ids,
-          "relationship_type": "group"
-      },
-      "text": group_name
-  }
+    intersection = nodes_already_in_a_group.intersection(node_ids)
+    if (len(intersection) > 0):
+      raise vt_graph_api.errors.CreateGroupError(
+          "Nodes {intersection} are already in groups.".format(
+              intersection=",".join(list(intersection))))
 
-  self.group_nodes[group_node_id] = relationship_node
+    relationship_node = {
+        "entity_id": "relationships_group_{group_id}".format(
+            group_id=group_node_id),
+        "type": 'relationship',
+        "entity_attributes": {
+            "grouped_node_ids": node_ids,
+            "relationship_type": "group"
+        },
+        "text": group_name
+    }
+
+    self.group_nodes[group_node_id] = relationship_node
 
 
-def set_representation(self, representation):
-  """Sets Graph representation.
+  def set_representation(self, representation):
+    """Sets Graph representation.
 
-  Args:
-    representation: Graph representation. See :py:class::`RepresentationType`.
-  """
-  self.representation = representation
+    Args:
+      representation: Graph representation. See :py:class::`RepresentationType`.
+    """
+    self.representation = representation
