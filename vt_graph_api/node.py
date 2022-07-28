@@ -41,7 +41,7 @@ class Node(object):
     "whois",
     "ssl_cert",
     "collection",
-    "reference"
+    "reference",
   )
   NODE_EXPANSIONS = {
       "file": [

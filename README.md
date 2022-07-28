@@ -39,6 +39,10 @@ Use tox to test:
 
 # Changelog
 
+### V2.2.0
+- Support for loading Graphs with special relationships (Groups, Intelligence, Livehunt, Retrohunt, Commonalities).
+- New method for creating groups of nodes.
+
 ### V2.1.0
 - Support for setting Graph representation.
 

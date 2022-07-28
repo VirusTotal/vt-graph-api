@@ -1,12 +1,11 @@
 """Test load graph from VT."""
 
-
 import json
 import os
 import pytest
+import unittest
 import vt_graph_api.errors
 import vt_graph_api.graph
-
 
 with (
     open(os.path.join(
@@ -35,7 +34,6 @@ EDITORS_RESPONSE_DATA = {
 GRAPH_WRONG_RESPONSE_DATA = {
     "dummy": "dummy_value"
 }
-
 
 API_KEY = "DUMMY_API_KEY"
 GRAPH_ID = "DUMMY_ID"
@@ -104,6 +102,34 @@ def test_load_graph_with_match(mocker):
     assert test_graph.links[(source, target, connection_type)]
   assert "virustotal" in test_graph.group_editors
   assert "alvarogf" in test_graph.user_viewers
+
+  special_relationship_nodes = [
+      "relationships_commonality_1670398662",
+      "relationships_retrohunt_user1626193170"
+  ]
+
+  special_relationship_links = [
+      ("relationships_commonality_1670398662",
+       "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f885",
+       "commonality"),
+      ("relationships_retrohunt_user1626193170",
+       "e6ecb146f469d243945ad8a5451ba1129c5b190f7d50c64580dbad4b8246f885",
+       "retrohunt")
+  ]
+
+  for node in special_relationship_nodes:
+    assert test_graph.special_relationship_nodes[node]
+
+  for source, target, connection_type in special_relationship_links:
+    link = {'source': source, 'target': target,
+            'connection_type': connection_type}
+    assert link in test_graph.special_relationship_links
+
+  group_nodes = ["relationships_group_123456789"]
+
+  for node in group_nodes:
+    assert test_graph.group_nodes[node]
+
   mocker.resetall()
 
 
@@ -189,4 +215,8 @@ def test_load_graph_wrong_json(mocker):
     m = mocker.Mock(status_code=200, json=mocker.Mock(side_effect=side_effects))
     mocker.patch("requests.get", return_value=m)
     vt_graph_api.graph.VTGraph.load_graph(GRAPH_ID, API_KEY)
+  mocker.resetall()
+
+
+def test_load_graph_with_group_nodes(mocker):
   mocker.resetall()
