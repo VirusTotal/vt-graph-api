@@ -1771,20 +1771,20 @@ class VTGraph(object):
     output["data"]["attributes"][
       "links"] = output_links + special_relationship_links
 
-  group_nodes = self._get_groups_nodes(added)
-  output_nodes = output["data"]["attributes"]["nodes"]
-  output["data"]["attributes"]["nodes"] = output_nodes + group_nodes
-  for node in group_nodes:
-    added.add(node['entity_id'])
+    group_nodes = self._get_groups_nodes(added)
+    output_nodes = output["data"]["attributes"]["nodes"]
+    output["data"]["attributes"]["nodes"] = output_nodes + group_nodes
+    for node in group_nodes:
+      added.add(node['entity_id'])
 
-  final_links = output["data"]["attributes"]["links"]
-  group_links = self._get_groups_links(final_links)
-  output["data"]["attributes"]["links"] = final_links + group_links
+    final_links = output["data"]["attributes"]["links"]
+    group_links = self._get_groups_links(final_links)
+    output["data"]["attributes"]["links"] = final_links + group_links
 
-  self._push_graph_to_vt(output)
-  self._push_editors()
-  self._push_viewers()
-  self._index = 0
+    self._push_graph_to_vt(output)
+    self._push_editors()
+    self._push_viewers()
+    self._index = 0
 
 
 def get_api_calls(self):
