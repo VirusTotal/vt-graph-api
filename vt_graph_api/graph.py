@@ -458,10 +458,10 @@ class VTGraph(object):
       }
     """
 
-    self.group_nodes = dict([
-        (node['entity_id'], node) for node in json_graph_data_nodes
-        if node.get("type") == "relationship" and node.get(
-            "entity_attributes", {}).get("relationship_type") == "group"])
+    self.group_nodes = {node['entity_id']: node for node in
+                        json_graph_data_nodes
+                        if node.get("type") == "relationship" and node.get(
+            "entity_attributes", {}).get("relationship_type") == "group"}
 
   def _is_special_relationship_node(self, node):
     """Checks if a node is a special relationship node.
