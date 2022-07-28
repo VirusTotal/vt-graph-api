@@ -16,6 +16,7 @@ import threading
 
 from enum import Enum
 
+import base64
 import concurrent.futures
 import requests
 import six
@@ -146,12 +147,10 @@ class VTGraph(object):
     graph._pull_editors()
     # Adds group nodes from json data
     graph._add_group_nodes_from_json_data(nodes)
-    # Adds group links from json data
-    graph._add_group_links_from_json_data(links)
     # Adds intelligence nodes from json_data
-    graph._add_intelligence_nodes_from_json_data(nodes)
+    graph._add_special_relationship_nodes_from_json_data(nodes)
     # Adds intelligence links from json data
-    graph._add_intelligence_links_from_json_data(links)
+    graph._add_special_links_from_json_data(links)
     # Adds nodes to the graph.
     graph._add_nodes_from_json_graph_data(nodes)
     # Adds links to the graph.
@@ -237,9 +236,8 @@ class VTGraph(object):
     self.nodes = {}
     self.links = {}
     self.group_nodes = {}
-    self.group_links = {}
-    self.intelligence_nodes = {}
-    self.intelligence_links = {}
+    self.special_relationship_nodes = {}
+    self.special_relationship_links = {}
 
     self._id_references = {}
     self._api_calls_lock = threading.Lock()
@@ -411,8 +409,8 @@ class VTGraph(object):
       non_special_relationship_links = [
           link for link in json_graph_data_links if
           link['source'] not in self.group_nodes and link[
-            'source'] not in self.intelligence_nodes and link[
-            'target'] not in self.intelligence_nodes and link[
+            'source'] not in self.special_relationship_nodes and link[
+            'target'] not in self.special_relationship_nodes and link[
             'target'] not in self.group_nodes
       ]
 
@@ -447,10 +445,6 @@ class VTGraph(object):
 
     json_graph_data_nodes are the responses from querying VT.
 
-    Raises:
-      InvalidJSONError: whether the API response does not have the correct
-        structure.
-
     Args:
       json_graph_data_nodes ([dict]): list of node's data with the following
       structure => {
@@ -468,22 +462,57 @@ class VTGraph(object):
         if node.get("type") == "relationship" and node.get(
             "entity_attributes", {}).get("relationship_type") == "group"])
 
-  def _add_group_links_from_json_data(self, json_graph_data_links):
-    self.group_links = [link for link in json_graph_data_links if
-                        link['source'] in self.group_nodes or link[
-                          'target'] in self.group_nodes]
+  def _add_special_relationship_nodes_from_json_data(self,
+      json_graph_data_nodes):
+    """Add all the special relationship nodes from the given data.
 
-  def _add_intelligence_nodes_from_json_data(self, json_graph_data_nodes):
-    self.intelligence_nodes = dict([
-        (node['entity_id'], node) for node in json_graph_data_nodes
-        if node.get("type") == "relationship" and node.get(
-            "entity_attributes", {}).get("relationship_type") == "intelligence"])
+    json_graph_data_nodes are the responses from querying VT.
 
-  def _add_intelligence_links_from_json_data(self, json_graph_data_links):
-    self.intelligence_links = [link for link in json_graph_data_links if
-                               link['source'] in self.intelligence_nodes or
-                               link[
-                                 'target'] in self.intelligence_nodes]
+    Args:
+      json_graph_data_nodes ([dict]): list of node's data with the following
+      structure => {
+          "entity_attributes": "",
+          "entity_id": "",
+          "index": "",
+          "type": "",
+          "x": "",
+          "y": ""
+      }
+    """
+    special_relationship_nodes = []
+
+    for node in json_graph_data_nodes:
+      is_relationship_node = node.get("type") == "relationship"
+      entity_attributes = node.get("entity_attributes", {})
+      relationship_type = entity_attributes.get("relationship_type")
+      is_commonalities = entity_attributes.get("commonalities") is not None
+
+      if (is_relationship_node and
+          (relationship_type and relationship_type != "group") or
+          is_commonalities):
+        special_relationship_nodes.append((node['entity_id'], node))
+
+    self.special_relationship_nodes = dict(special_relationship_nodes)
+
+  def _add_special_links_from_json_data(self, json_graph_data_links):
+    """Add all the special relationship links from the given data.
+    json_graph_data_nodes are the responses from querying VT.
+
+    Args:
+      json_graph_data_nodes ([dict]): list of node's data with the following
+      structure => {
+          "entity_attributes": "",
+          "entity_id": "",
+          "index": "",
+          "type": "",
+          "x": "",
+          "y": ""
+      }
+    """
+    self.special_relationship_links = [
+        link for link in json_graph_data_links if
+        link['source'] in self.special_relationship_nodes or
+        link['target'] in self.special_relationship_nodes]
 
   def _pull_viewers(self):
     """Pull graph's users and groups viewers from VT API.
@@ -1730,15 +1759,17 @@ class VTGraph(object):
       self._add_node_to_output(output, node_id)
       added.add(node_id)
 
-    intelligence_nodes = self._get_intelligence_nodes()
+    special_relationship_nodes = self._get_special_relationship_nodes()
     output_nodes = output["data"]["attributes"]["nodes"]
-    output["data"]["attributes"]["nodes"] = [*output_nodes, *intelligence_nodes]
-    for node in intelligence_nodes:
+    output["data"]["attributes"]["nodes"] = [*output_nodes,
+                                             *special_relationship_nodes]
+    for node in special_relationship_nodes:
       added.add(node['entity_id'])
 
-    intelligence_links = self._get_intelligence_links(added)
+    special_relationship_links = self._get_special_relationship_links(added)
     output_links = output["data"]["attributes"]["links"]
-    output["data"]["attributes"]["links"] = [*output_links, *intelligence_links]
+    output["data"]["attributes"]["links"] = [*output_links,
+                                             *special_relationship_links]
 
     group_nodes = self._get_groups_nodes(added)
     output_nodes = output["data"]["attributes"]["nodes"]
@@ -1746,9 +1777,9 @@ class VTGraph(object):
     for node in group_nodes:
       added.add(node['entity_id'])
 
-    group_links = self._get_groups_links(added)
-    output_links = output["data"]["attributes"]["links"]
-    output["data"]["attributes"]["links"] = [*output_links, *group_links]
+    final_links = output["data"]["attributes"]["links"]
+    group_links = self._get_groups_links(final_links)
+    output["data"]["attributes"]["links"] = [*final_links, *group_links]
 
     self._push_graph_to_vt(output)
     self._push_editors()
@@ -1841,6 +1872,14 @@ class VTGraph(object):
     ]}
 
   def _get_groups_nodes(self, final_nodes):
+    """Returns all the loaded and generated group nodes.
+
+    Args:
+      final_nodes: Set with the ids of all the added nodes.
+
+    Returns: Array of group nodes.
+
+    """
     group_nodes = []
     current_index = len(final_nodes)
     for idx, group_node in enumerate(self.group_nodes.values()):
@@ -1853,15 +1892,53 @@ class VTGraph(object):
         group_nodes.append(group_node)
     return group_nodes
 
-  def _get_groups_links(self, final_nodes):
-    return [link for link in self.group_links if
-            link['source'] in final_nodes and link['target'] in final_nodes]
+  def _get_groups_links(self, final_links):
+    """Generates all the links needed to represent groups in VTGraph.
 
-  def _get_intelligence_nodes(self):
-    return list(self.intelligence_nodes.values())
+    Args:
+      final_links: list with all the links added in the Graph.
 
-  def _get_intelligence_links(self, final_nodes):
-    return [link for link in self.intelligence_links if
+    Returns: List with the links needed to represent groups in VTGraph.
+
+    """
+    map_node_group = {}
+
+    # Generate a link for each pair node_in_group -> group_node
+    for group_node in self.group_nodes.values():
+      for node_in_group in group_node['entity_attributes']['grouped_node_ids']:
+        map_node_group[node_in_group] = group_node['entity_id']
+
+    group_links = [{'source': node, 'target': group, 'connection_type': 'group'}
+                   for node, group in map_node_group.items()]
+
+    # Generate a link for each link where source or target is a node
+    # inside a group.
+    for link in final_links:
+      if link['source'] in map_node_group:
+        new_link = link.copy()
+        new_link['source'] = map_node_group[link['source']]
+        group_links.append(new_link)
+      elif link['target'] in map_node_group:
+        new_link = link.copy()
+        new_link['target'] = map_node_group[link['target']]
+        group_links.append(new_link)
+    return group_links
+
+  def _get_special_relationship_nodes(self):
+    """Returns a list with the special relationship nodes."""
+    return list(self.special_relationship_nodes.values())
+
+  def _get_special_relationship_links(self, final_nodes):
+    """Returns links needed to represent special relationship nodes.
+    It checks if the link connections exist or not.
+
+    Args:
+      final_nodes: Set with all the nodes added
+
+    Returns: list of links related to special_relationship_nodes.
+
+    """
+    return [link for link in self.special_relationship_links if
             link['source'] in final_nodes and link['target'] in final_nodes]
 
   def create_collection(self, name=None, description=None):
@@ -1913,6 +1990,61 @@ class VTGraph(object):
         collection_id=collection_id
     )
 
+  def _generate_group_node_id(self, nodes_id):
+    return ",".join(nodes_id).replace("=", "")
+
+  def create_group(self, node_ids, group_name):
+    """
+
+    Args:
+      node_ids:
+      group_name:
+
+    Returns:
+
+    Raises: CreateGroupError if the
+
+    """
+    group_node_id = self._generate_group_node_id(node_ids)
+    node_ids_set = set(node_ids)
+
+    # Check if the user has provided node ids
+    if not node_ids:
+      raise vt_graph_api.errors.CreateGroupError(
+          "A group must contain at least one node.")
+
+    # Check if all the nodes exists.
+    for node_id in node_ids_set:
+      if node_id not in self.nodes:
+        raise vt_graph_api.errors.CreateGroupError(
+            "Node {node_id} is not in the Graph.".format(
+                node_id=node_id))
+
+    # Check if nodes are already in a group.
+    nodes_already_in_a_group = set()
+    for group_node in self.group_nodes.values():
+      for node_id in group_node["entity_attributes"]["grouped_node_ids"]:
+        nodes_already_in_a_group.add(node_id)
+
+    intersection = nodes_already_in_a_group.intersection(node_ids)
+    if (len(intersection) > 0):
+      raise vt_graph_api.errors.CreateGroupError(
+          "Nodes {intersection} are already in groups.".format(
+              intersection=",".join(list(intersection))))
+
+    relationship_node = {
+        "entity_id": "relationships_group_{group_id}".format(
+            group_id=group_node_id),
+        "type": 'relationship',
+        "entity_attributes": {
+            "grouped_node_ids": node_ids,
+            "relationship_type": "group"
+        },
+        "text": group_name
+    }
+
+    self.group_nodes[group_node_id] = relationship_node
+
   def set_representation(self, representation):
     """Sets Graph representation.
 
@@ -1920,4 +2052,3 @@ class VTGraph(object):
       representation: Graph representation. See :py:class::`RepresentationType`.
     """
     self.representation = representation
-

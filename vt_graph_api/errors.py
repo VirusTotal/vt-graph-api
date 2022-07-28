@@ -49,3 +49,6 @@ class DownloadScreenshotError(Exception):
 
 class CreateCollectionError(Exception):
   pass
+
+class CreateGroupError(Exception):
+  pass
