@@ -7,8 +7,8 @@ VirusTotal Graph API allows you programatically interact with VirusTotal dataset
 ## Installing the API
 Install VirusTotal Graph Python API.
 ```
-git clone https://github.com/VirusTotal/vt_graph_api
-cd vt_graph_api
+git clone https://github.com/VirusTotal/vt-graph-api
+cd vt-graph-api
 pip install . --user
 ```
 
